@@ -1,6 +1,5 @@
 (ns dots.components.board
-  (:require [dots.dev :refer [is-dev?]]
-            [om.core :as om :include-macros true]
+  (:require [om.core :as om :include-macros true]
             [om.dom :as d :include-macros true]))
 
 (defn header-col
