@@ -1,6 +1,6 @@
 (ns dots.dev
-    (:require [figwheel.client :as figwheel :include-macros true]
-              [weasel.repl :as weasel]))
+  (:require [figwheel.client :as figwheel :include-macros true]
+            [weasel.repl :as weasel]))
 
 (def is-dev? (.contains (.. js/document -body -classList) "is-dev"))
 
