@@ -18,7 +18,7 @@
          (repeat number-colors))))
 
 (defn colorize-word [word]
-  (map (fn [x c] [:span {:class (name c)} x]) word (rand-colors)))
+  (map (fn [x c] (d/span {:className (name c)} x)) word (rand-colors)))
 
 (defn score-screen [props owner]
   (reify
@@ -37,6 +37,7 @@
                               " "
                               (colorize-word (str (:score props))))
                       score-text)]
+        (. js/console log score-text)
         (d/div
          #js {:className "dots-game"}
          (d/div
