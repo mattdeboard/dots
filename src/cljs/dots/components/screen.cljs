@@ -18,7 +18,15 @@
          (repeat number-colors))))
 
 (defn colorize-word [word]
-  (map (fn [x c] (d/span {:className (name c)} x)) word (rand-colors)))
+  (map (fn [x c] {:color (name c) :letter x}) word (rand-colors nil)))
+
+(defn color-letter [props owner]
+  (reify
+    om/IRender
+    (render [_]
+      (let [color (:color props)
+            l (:letter props)]
+        (d/span #js {:className (name color)} l)))))
 
 (defn score-screen [props owner]
   (reify
@@ -26,26 +34,19 @@
     (init-state [_] {:score nil})
 
     om/IWillReceiveProps
-    (will-receive-props [this next-props next-state]
+    (will-receive-props [this next-props]
       (om/set-state! this :score (:score next-props)))
 
     om/IRender
     (render [_]
-      (let [score-text (colorize-word "SCORE")
-            marquee (if (:score props)
-                      (concat score-text
-                              " "
-                              (colorize-word (str (:score props))))
-                      score-text)]
-        (. js/console log score-text)
+      (d/div
+       #js {:className "dots-game"}
+       (d/div
+        #js {:className "notice-square"}
+        (apply d/div #js {:className "marq"}
+               (om/build-all color-letter (colorize-word "SCORE")))
         (d/div
-         #js {:className "dots-game"}
-         (d/div
-          #js {:className "notice-square"}
-          (d/div
-           #js {:className "marq"} marquee)
-          (d/div
-           #js {:className "control-area"}
-           (d/a
-            #js {:className "start-new-game" :href "#"}
-            "new game"))))))))
+         #js {:className "control-area"}
+         (d/a
+          #js {:className "start-new-game" :href "#"}
+          "new game")))))))
