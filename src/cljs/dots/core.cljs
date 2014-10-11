@@ -1,5 +1,6 @@
 (ns dots.core
-  (:require [dots.components.board :refer [game-board]]
+  (:require [dots.chans :refer :all]
+            [dots.components.board :refer [game-board]]
             [dots.components.screen :refer [score-screen]]
             [dots.dev :refer [is-dev?]]
             [om.core :as om :include-macros true]
