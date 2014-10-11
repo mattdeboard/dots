@@ -28,6 +28,23 @@
             l (:letter props)]
         (d/span #js {:className (name color)} l)))))
 
+(defn marquee [props owner]
+  (reify
+    om/IRender
+    (render [_]
+      (let [word (om/build-all color-letter (colorize-word "SCORE"))]
+        (apply d/div #js {:className "marq"} word)))))
+
+(defn control-area [props owner]
+  (reify
+    om/IRender
+    (render [_]
+      (d/div
+       #js {:className "control-area"}
+       (d/a
+        #js {:className "start-new-game" :href "#"}
+        "new game")))))
+
 (defn score-screen [props owner]
   (reify
     om/IInitState
@@ -43,10 +60,5 @@
        #js {:className "dots-game"}
        (d/div
         #js {:className "notice-square"}
-        (apply d/div #js {:className "marq"}
-               (om/build-all color-letter (colorize-word "SCORE")))
-        (d/div
-         #js {:className "control-area"}
-         (d/a
-          #js {:className "start-new-game" :href "#"}
-          "new game")))))))
+        (om/build marquee nil)
+        (om/build control-area nil))))))
