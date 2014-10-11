@@ -47,12 +47,12 @@
 (defn anim-template [level-name start-y end-y]
   (str
    "." level-name " {\n"
-   "-ms-transform: translate(0," end-y "px);\n"      
-   "-moz-transform: translate(0," end-y "px);\n"   
+   "-ms-transform: translate(0," end-y "px);\n"
+   "-moz-transform: translate(0," end-y "px);\n"
    "-webkit-transform: translate3d(0," end-y "px,0);\n"
    "-webkit-animation-name: " level-name ";\n"
    "}\n"
-   "@-webkit-keyframes " (name level-name) "{\n" 
+   "@-webkit-keyframes " (name level-name) "{\n"
    (frames start-y end-y)
    "\n}\n"))
 

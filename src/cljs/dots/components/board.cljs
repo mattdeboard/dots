@@ -44,7 +44,6 @@
   (reify
     om/IRender
     (render [this]
-      (d/div
-       #js {:className "dots-game" :id "main"}
+      (d/div #js {:className "dots-game" :id "main"}
        (om/build header nil)
        (om/build board-area nil)))))
