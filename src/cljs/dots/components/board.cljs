@@ -36,7 +36,9 @@
       (if (= (:time prev-state) 0)
         (let [timer-id (om/get-state owner :timer-id)]
           (js/clearInterval timer-id)
-          (om/transact! cursor :time #(- % %)))))
+          (. js/console log (clj->js cursor))
+          (om/transact! cursor :active-view (fn [_] "score-screen"))
+          (. js/console log (clj->js cursor)))))
 
     om/IRender
     (render [_]
@@ -72,36 +74,38 @@
         (d/div #js {:className className
                     :style #js {:top "-112px" :left left}})))))
 
-(defn board-area [cursor owner]
+(defn board-area [props owner]
   (reify
     om/IRender
     (render [this]
-      (let [{:keys [board-size]} cursor
+      (let [board-size (get-in props [:ui :board-size])
             dots (for [col (range board-size) row (range board-size)]
                    {:column col :row row :color (first (take 1 (rand-colors nil)))})
             grid (om/build-all dot dots)]
-        (d/div #js {:className "board-area"}
-               (d/div #js {:className "chain-line"})
-               (d/div #js {:className "dot-highlights"})
-               (apply d/div #js {:className "board"} grid))))))
+        (d/div
+         #js {:className "board-area"}
+         (d/div #js {:className "chain-line"})
+         (d/div #js {:className "dot-highlights"})
+         (apply d/div #js {:className "board"} grid))))))
 
-(defn game-board [cursor owner]
+(defn game-board [props owner]
   (reify
     om/IDisplayName
     (display-name [_] "game-board")
 
     om/IRender
     (render [this]
-      (. js/console log (get-in cursor [:style :display]))
+      (. js/console log (clj->js props))
       (d/div
        #js {:className "dots-game" :id "game-board"
-            :style (clj->js (:style cursor))}
+            :style (clj->js (:style props))}
        ;; Only render the header if we're the active element on the page.
        ;; This way, the timer doesn't start until it's visible on the page.
        ;; Honestly this feels a little hacky.
-       (if (= (get-in cursor [:style :display]) "inline")
-         (om/build header (get cursor :header)
+       (if (= (get-in props [:style :display]) "inline")
+         (om/build header (get props :ui)
                    {:init-state
-                    {:time (get-in cursor [:header :time])
-                     :score (get-in cursor [:header :score])}}))
-       (om/build board-area cursor)))))
+                    {:time (get-in props [:header :time])
+                     :score (get-in props [:header :score])
+                     :active-view (select-keys props [:ui])}}))
+       (om/build board-area props)))))
