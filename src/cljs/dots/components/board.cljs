@@ -24,21 +24,20 @@
     (will-mount [_]
       (js/setInterval
        (fn []
-         (if (om/cursor? cursor)
-           (om/transact! cursor :time dec)
-           (swap! cursor assoc :time dec)))
+         (om/update-state! owner :time dec))
        1000))
 
     om/IRender
     (render [_]
-      (let [{:keys [time score]} cursor]
+      (let [{:keys [time score]} (om/get-state owner)]
         (d/div
          #js {:className "header"}
-         (om/build header-col {:title "time" :val (get cursor :time)})
+         (om/build header-col {:title "time" :val time})
          (om/build header-col {:title "score" :val score}))))))
 
-(defn dot [props owner]
-  ;; A component for an individual dot on the game board.
+(defn dot
+  "Component for an individual dot."
+  [props owner]
   (reify
     ;; om/IWillMount
     ;; (will-mount [_]
@@ -79,8 +78,9 @@
   (reify
     om/IRender
     (render [this]
-      (. js/console log "Buh Rendering")
       (d/div
        #js {:className "dots-game" :id "main"}
-       (om/build header (get cursor :header))
+       (om/build header nil {:init-state
+                             {:time (get-in cursor [:header :time])
+                              :score (get-in cursor [:header :score])}})
        (om/build board-area cursor)))))
