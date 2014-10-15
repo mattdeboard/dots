@@ -1,6 +1,7 @@
 (ns dots.components.main
   (:require [dots.components.board :refer [game-board]]
             [dots.components.screen :refer [score-screen]]
+            [dots.utils :refer [log<-]]
             [om.core :as om :include-macros true]
             [om.dom :as d :include-macros true]))
 
@@ -28,11 +29,11 @@
   [name cursor]
   (= name (get-in cursor [:ui :active-view])))
 
-(defn game-container [cursor owner]
+(defn game-container [props owner]
   (reify
     om/IWillMount
     (will-mount [_]
-      (om/set-state! owner :active-view (get-in cursor [:ui :active-view])))
+      (om/set-state! owner :active-view (get-in props [:ui :active-view])))
 
     om/IWillReceiveProps
     (will-receive-props [this next-props]
@@ -47,14 +48,15 @@
             :ondragstart "return false;"
             :ondrop "return false;"}
        (om/build score-screen
-                 {:click-handler #(handle-click % owner cursor)
-                  :game-state (get cursor :game-state)
-                  :style {:display (if (active? "score-screen" cursor)
+                 {:game-state (get props :game-state)
+                  :click-handler #(handle-click % owner props)
+                  :game-state (get props :game-state)
+                  :style {:display (if (active? "score-screen" props)
                                      "inline" "none")}}
                  {:react-key "score-screen"})
        (om/build game-board
-                 {:game-state (get cursor :game-state)
-                  :ui (get cursor :ui)
-                  :style {:display (if (active? "game-board" cursor)
+                 {:game-state (get props :game-state)
+                  :ui (get props :ui)
+                  :style {:display (if (active? "game-board" props)
                                      "inline" "none")}}
                  {:react-key "game-board"})))))
