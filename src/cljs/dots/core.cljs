@@ -6,7 +6,9 @@
             [om.core :as om :include-macros true]
             [om.dom :as d :include-macros true]))
 
-(def app-state (atom {:ui {:active-view "score-screen" :board-size 6}
+(def app-state (atom {:ui {:active-view "score-screen"
+                           :board-size 6
+                           :game-complete false}
                       :header {:time 1 :score 0}}))
 
 (om/root

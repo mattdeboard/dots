@@ -1,5 +1,6 @@
 (ns dots.components.screen
-  (:require [om.core :as om :include-macros true]
+  (:require [dots.utils :refer [log<-]]
+            [om.core :as om :include-macros true]
             [om.dom :as d :include-macros true]))
 
 
@@ -36,7 +37,10 @@
       (let [word (om/build-all color-letter (colorize-word "SCORE"))]
         (apply d/div #js {:className "marq"} word)))))
 
-(defn control-area [props owner]
+(defn control-area
+  "Component for the portion of the DOM containing interactive stuff
+  (buttons etc.)."
+  [props owner]
   (reify
     om/IRender
     (render [_]

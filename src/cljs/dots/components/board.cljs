@@ -36,9 +36,8 @@
       (if (= (:time prev-state) 0)
         (let [timer-id (om/get-state owner :timer-id)]
           (js/clearInterval timer-id)
-          (. js/console log (clj->js cursor))
           (om/transact! cursor :active-view (fn [_] "score-screen"))
-          (. js/console log (clj->js cursor)))))
+          (om/transact! cursor :game-complete (fn [_] true)))))
 
     om/IRender
     (render [_]
@@ -95,7 +94,6 @@
 
     om/IRender
     (render [this]
-      (. js/console log (clj->js props))
       (d/div
        #js {:className "dots-game" :id "game-board"
             :style (clj->js (:style props))}
