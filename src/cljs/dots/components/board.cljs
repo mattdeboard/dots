@@ -22,10 +22,21 @@
   (reify
     om/IWillMount
     (will-mount [_]
-      (js/setInterval
-       (fn []
-         (om/update-state! owner :time dec))
-       1000))
+      (let [timer-id (js/setInterval
+                      (fn []
+                        (let [time (om/get-state owner :time)]
+                          (cond
+                           (> time 0) (om/update-state! owner :time dec)
+                           :else (om/set-state! owner :time 0))))
+                      1000)]
+        (om/set-state! owner :timer-id timer-id)))
+
+    om/IDidUpdate
+    (did-update [_ prev-props prev-state]
+      (if (= (:time prev-state) 0)
+        (let [timer-id (om/get-state owner :timer-id)]
+          (js/clearInterval timer-id)
+          (om/transact! cursor :time #(- % %)))))
 
     om/IRender
     (render [_]
@@ -80,7 +91,8 @@
     (render [this]
       (d/div
        #js {:className "dots-game" :id "main"}
-       (om/build header nil {:init-state
-                             {:time (get-in cursor [:header :time])
-                              :score (get-in cursor [:header :score])}})
+       (om/build header (get cursor :header)
+                 {:init-state
+                  {:time (get-in cursor [:header :time])
+                   :score (get-in cursor [:header :score])}})
        (om/build board-area cursor)))))

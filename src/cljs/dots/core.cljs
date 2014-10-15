@@ -8,7 +8,7 @@
 
 (def app-state (atom {:active-view "score-screen"
                       :board-size 6
-                      :header {:time 60 :score 0}}))
+                      :header {:time 10 :score 0}}))
 
 (om/root
  (fn [app owner]
