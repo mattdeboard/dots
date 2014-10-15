@@ -15,10 +15,6 @@
     (init-state [_]
       {:active "score-screen"})
 
-    om/IWillMount
-    (will-mount [_]
-      (om/set-state! owner :header (:header cursor)))
-
     om/IWillReceiveProps
     (will-receive-props [this next-props]
       (if (not= (:active next-props) (om/get-state owner :active))
@@ -26,6 +22,7 @@
 
     om/IRender
     (render [_]
+      (. js/console log "Rendering")
       (let [component (if (= (om/get-state owner :active) "score-screen")
                         score-screen game-board)
             view (om/build component

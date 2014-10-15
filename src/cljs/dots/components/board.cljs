@@ -18,55 +18,55 @@
 
 (defn header
   "Component for the game board header."
-  [props owner]
+  [cursor owner]
   (reify
     om/IWillMount
     (will-mount [_]
       (js/setInterval
        (fn []
-         (if (om/cursor? props)
-           (om/transact! props :time dec)
-           (swap! props assoc :time dec)))
+         (if (om/cursor? cursor)
+           (om/transact! cursor :time dec)
+           (swap! cursor assoc :time dec)))
        1000))
 
     om/IRender
     (render [_]
-      (let [{:keys [time score]} props]
+      (let [{:keys [time score]} cursor]
         (d/div
          #js {:className "header"}
-         (om/build header-col {:title "time" :val (get props :time)})
+         (om/build header-col {:title "time" :val (get cursor :time)})
          (om/build header-col {:title "score" :val score}))))))
 
 (defn dot [props owner]
   ;; A component for an individual dot on the game board.
   (reify
-    om/IWillMount
-    (will-mount [_]
-      (om/set-state! owner :color (:color props))
-      (om/set-state! owner :column (:column props))
-      (om/set-state! owner :row (:row props)))
+    ;; om/IWillMount
+    ;; (will-mount [_]
+    ;;   (om/set-state! owner :color (:color props))
+    ;;   (om/set-state! owner :column (:column props))
+    ;;   (om/set-state! owner :row (:row props)))
 
-    om/IWillReceiveProps
-    (will-receive-props [_ next-props]
-      (doseq [k [:color :column :row]]
-        (let [next-k (k next-props)]
-          (if (not= k next-k) (om/set-state! owner k next-k)))))
+    ;; om/IWillReceiveProps
+    ;; (will-receive-props [_ next-props]
+    ;;   (doseq [k [:color :column :row]]
+    ;;     (let [next-k (k next-props)]
+    ;;       (if (not= k next-k) (om/set-state! owner k next-k)))))
 
-    om/IRenderState
-    (render-state [_ state]
-      (let [color (:color state)
-            col (:column state)
-            row (:row state)
+    om/IRender
+    (render [_]
+      (let [color (:color props)
+            col (:column props)
+            row (:row props)
             className (str "dot levelish " (name color) " level-" row)
             left (str (+ 23 (* 45 col)) "px")]
         (d/div #js {:className className
                     :style #js {:top "-112px" :left left}})))))
 
-(defn board-area [props owner]
+(defn board-area [cursor owner]
   (reify
     om/IRender
     (render [this]
-      (let [board-size (:board-size props)
+      (let [{:keys [board-size]} cursor
             dots (for [col (range board-size) row (range board-size)]
                    {:column col :row row :color (first (take 1 (rand-colors nil)))})
             grid (om/build-all dot dots)]
@@ -79,7 +79,8 @@
   (reify
     om/IRender
     (render [this]
+      (. js/console log "Buh Rendering")
       (d/div
        #js {:className "dots-game" :id "main"}
        (om/build header (get cursor :header))
-       (om/build board-area props)))))
+       (om/build board-area cursor)))))
