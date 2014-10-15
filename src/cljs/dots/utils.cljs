@@ -1,4 +1,4 @@
 (ns dots.utils)
 
-(defn log<- [s]
-  (. js/console log s))
+(defn log<- [thing]
+  (. js/console log (clj->js thing)))
