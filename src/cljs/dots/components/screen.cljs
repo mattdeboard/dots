@@ -15,6 +15,7 @@
                  dot-colors)
         number-colors (if exclude-color (dec number-colors) number-colors)]
     (. js/console log "getting colors" (prn-str colors))
+    (rand-nth colors)
     (map #(get colors (rand-int %))
          (repeat number-colors))))
 

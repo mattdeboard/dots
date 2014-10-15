@@ -25,8 +25,9 @@
       (let [component (if (= (om/get-state owner :active) "score-screen")
                         score-screen game-board)
             view (om/build component
-                           {:click-handler #(handle-click % owner)}
-                           {:react-key (om/get-state owner :active)})]
+                           {:board-size (:board-size props)
+                            :click-handler #(handle-click % owner)}
+                           {:react-key (:active props)})]
        (d/div
          #js {:className "dots-game-container no scroll"
               :ondragstart "return false;"

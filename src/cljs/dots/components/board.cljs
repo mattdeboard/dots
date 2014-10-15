@@ -1,5 +1,6 @@
 (ns dots.components.board
-  (:require [om.core :as om :include-macros true]
+  (:require [dots.components.screen :refer [rand-colors]]
+            [om.core :as om :include-macros true]
             [om.dom :as d :include-macros true]))
 
 (defn header-col
@@ -23,6 +24,12 @@
     (init-state [_]
       {:time 60 :score 0})
 
+    om/IWillMount
+    (will-mount [_]
+      (js/setInterval
+       (fn [] (om/set-state! owner :time (dec (om/get-state owner :time))))
+       1000))
+
     om/IRender
     (render [_]
       (let [{:keys [time score]} (om/get-state owner)]
@@ -31,14 +38,46 @@
          (om/build header-col {:title "time" :val time})
          (om/build header-col {:title "score" :val score}))))))
 
+(defn dot [props owner]
+  (reify
+    om/IInitState
+    (init-state [_] {:color nil :column 0 :row 0})
+
+    om/IWillMount
+    (will-mount [_]
+      (om/set-state! owner :color (:color props))
+      (om/set-state! owner :column (:column props))
+      (om/set-state! owner :row (:row props)))
+
+    om/IWillReceiveProps
+    (will-receive-props [_ next-props]
+      (doseq [k [:color :column :row]]
+        (let [next-k (k next-props)]
+          (if (not= k next-k) (om/set-state! owner k next-k)))))
+
+    om/IRenderState
+    (render-state [_ state]
+      (let [color (:color state)
+            col (:column state)
+            row (:row state)
+            className (str "dot levelish " (name color) " level-" row)
+            left (str (+ 23 (* 45 col)) "px")]
+        (d/div #js {:className className
+                    :style #js {:top "-112px" :left left}})))))
+
 (defn board-area [props owner]
   (reify
     om/IRender
     (render [this]
-      (d/div #js {:className "board-area"}
-       (d/div #js {:className "chain-line"}
-        (d/div #js {:className "dot-highlights"}
-         (d/div #js {:className "board"})))))))
+      (let [board-size (:board-size props)
+            dots (for [col (range board-size) row (range board-size)]
+                   {:column col :row row :color (first (take 1 (rand-colors nil)))})
+            grid (om/build-all dot dots)]
+        (. js/console log dots)
+        (d/div #js {:className "board-area"}
+               (d/div #js {:className "chain-line"})
+               (d/div #js {:className "dot-highlights"})
+               (apply d/div #js {:className "board"} grid))))))
 
 (defn game-board [props owner]
   (reify
@@ -46,4 +85,4 @@
     (render [this]
       (d/div #js {:className "dots-game" :id "main"}
        (om/build header nil)
-       (om/build board-area nil)))))
+       (om/build board-area props)))))
