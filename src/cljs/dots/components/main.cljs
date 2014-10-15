@@ -10,6 +10,9 @@
     (om/transact! cursor :active-view #(if (= % "score-screen")
                                          "game-board" "score-screen"))))
 
+(defn active? [name cursor]
+  (= name (get cursor :active-view)))
+
 (defn game-container [cursor owner]
   (reify
     om/IWillMount
@@ -23,15 +26,19 @@
 
     om/IRender
     (render [_]
-      (let [component (if (= (om/get-state owner :active-view) "score-screen")
-                        score-screen game-board)
-            view (om/build component
-                           {:board-size (:board-size cursor)
-                            :click-handler #(handle-click % owner cursor)
-                            :header (get cursor :header)}
-                           {:react-key (:active-view cursor)})]
-       (d/div
-         #js {:className "dots-game-container no scroll"
-              :ondragstart "return false;"
-              :ondrop "return false;"}
-         view)))))
+      (d/div
+       #js {:className "dots-game-container no scroll"
+            :ondragstart "return false;"
+            :ondrop "return false;"}
+       (om/build score-screen
+                 {:click-handler #(handle-click % owner cursor)
+                  :header (get cursor :header)
+                  :style {:display (if (active? "score-screen" cursor)
+                                     "inline" "none")}}
+                 {:react-key "score-screen"})
+       (om/build game-board
+                 {:board-size (:board-size cursor)
+                  :header (get cursor :header)
+                  :style {:display (if (active? "game-board" cursor)
+                                     "inline" "none")}}
+                 {:react-key "game-board"}))))))

@@ -87,12 +87,21 @@
 
 (defn game-board [cursor owner]
   (reify
+    om/IDisplayName
+    (display-name [_] "game-board")
+
     om/IRender
     (render [this]
+      (. js/console log (get-in cursor [:style :display]))
       (d/div
-       #js {:className "dots-game" :id "main"}
-       (om/build header (get cursor :header)
-                 {:init-state
-                  {:time (get-in cursor [:header :time])
-                   :score (get-in cursor [:header :score])}})
+       #js {:className "dots-game" :id "game-board"
+            :style (clj->js (:style cursor))}
+       ;; Only render the header if we're the active element on the page.
+       ;; This way, the timer doesn't start until it's visible on the page.
+       ;; Honestly this feels a little hacky.
+       (if (= (get-in cursor [:style :display]) "inline")
+         (om/build header (get cursor :header)
+                   {:init-state
+                    {:time (get-in cursor [:header :time])
+                     :score (get-in cursor [:header :score])}}))
        (om/build board-area cursor)))))

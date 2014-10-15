@@ -50,8 +50,8 @@
 
 (defn score-screen [props owner]
   (reify
-    om/IInitState
-    (init-state [_] {:score nil})
+    om/IDisplayName
+    (display-name [_] "score-screen")
 
     om/IWillReceiveProps
     (will-receive-props [_ next-props]
@@ -60,7 +60,8 @@
     om/IRender
     (render [_]
       (d/div
-       #js {:className "dots-game" :id "main"}
+       #js {:className "dots-game" :id "score-screen"
+            :style (clj->js (:style props))}
        (d/div
         #js {:className "notice-square"}
         (om/build marquee nil)
