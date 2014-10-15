@@ -14,7 +14,7 @@
  (fn [app owner]
    (reify om/IRender
      (render [_]
-       (om/build game-container @app-state))))
+       (om/build game-container app))))
  app-state
  {:target (. js/document (getElementById "app"))})
 

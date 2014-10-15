@@ -23,8 +23,11 @@
     om/IWillMount
     (will-mount [_]
       (js/setInterval
-       (fn [] (om/transact! props [:header :time] dec))
-       ;; (fn [] (om/set-state! owner :time (dec (om/get-state owner :time))))
+       (fn []
+         (if (om/cursor? props)
+           (om/transact! props [:header :time] dec)
+           (swap! props assoc-in [:header :time]
+                  (dec (get-in @props [:header :time])))))
        1000))
 
     om/IRender
@@ -73,10 +76,11 @@
                (d/div #js {:className "dot-highlights"})
                (apply d/div #js {:className "board"} grid))))))
 
-(defn game-board [props owner]
+(defn game-board [cursor owner]
   (reify
     om/IRender
     (render [this]
-      (d/div #js {:className "dots-game" :id "main"}
-       (om/build header {:header (:header props)} {:init-state (get-in props [:header])})
+      (d/div
+       #js {:className "dots-game" :id "main"}
+       (om/build header (get cursor :header))
        (om/build board-area props)))))
