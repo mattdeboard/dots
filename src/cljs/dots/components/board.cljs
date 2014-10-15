@@ -25,17 +25,16 @@
       (js/setInterval
        (fn []
          (if (om/cursor? props)
-           (om/transact! props [:header :time] dec)
-           (swap! props assoc-in [:header :time]
-                  (dec (get-in @props [:header :time])))))
+           (om/transact! props :time dec)
+           (swap! props assoc :time dec)))
        1000))
 
     om/IRender
     (render [_]
-      (let [{:keys [time score]} (om/get-state owner)]
+      (let [{:keys [time score]} props]
         (d/div
          #js {:className "header"}
-         (om/build header-col {:title "time" :val (get-in props [:header :time])})
+         (om/build header-col {:title "time" :val (get props :time)})
          (om/build header-col {:title "score" :val score}))))))
 
 (defn dot [props owner]
