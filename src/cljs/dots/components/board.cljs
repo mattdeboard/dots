@@ -1,5 +1,6 @@
 (ns dots.components.board
   (:require [dots.components.screen :refer [rand-colors]]
+            [dots.utils :refer [log<-]]
             [om.core :as om :include-macros true]
             [om.dom :as d :include-macros true]))
 
@@ -36,8 +37,10 @@
       (if (= (:time prev-state) 0)
         (let [timer-id (om/get-state owner :timer-id)]
           (js/clearInterval timer-id)
-          (om/transact! cursor :active-view (fn [_] "score-screen"))
-          (om/transact! cursor :game-complete? (fn [_] true)))))
+          (om/transact! (get cursor :game-state)
+                        (fn [m] (merge m {:game-complete? true})))
+          (om/transact! (get cursor :ui)
+                        (fn [m] (merge m {:active-view "score-screen"}))))))
 
     om/IRender
     (render [_]
@@ -101,9 +104,9 @@
        ;; This way, the timer doesn't start until it's visible on the page.
        ;; Honestly this feels a little hacky.
        (if (= (get-in props [:style :display]) "inline")
-         (om/build header (get props :ui)
+         (om/build header {:ui (get props :ui)
+                           :game-state (get props :game-state)}
                    {:init-state
                     {:time (get-in props [:game-state :time])
-                     :score (get-in props [:game-state :score])
-                     :active-view (select-keys props [:ui])}}))
+                     :score (get-in props [:game-state :score])}}))
        (om/build board-area props)))))
