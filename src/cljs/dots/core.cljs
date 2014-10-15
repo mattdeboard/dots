@@ -6,9 +6,9 @@
             [om.core :as om :include-macros true]
             [om.dom :as d :include-macros true]))
 
-(defonce app-state
-  (atom {:active-view "score-screen"
-         :board-size 6}))
+(def app-state (atom {:active-view "score-screen"
+                      :board-size 6
+                      :header {:time 60 :score 0}}))
 
 (om/root
  (fn [app owner]

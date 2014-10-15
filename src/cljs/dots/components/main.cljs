@@ -26,7 +26,8 @@
                         score-screen game-board)
             view (om/build component
                            {:board-size (:board-size props)
-                            :click-handler #(handle-click % owner)}
+                            :click-handler #(handle-click % owner)
+                            :header (:header props)}
                            {:react-key (:active props)})]
        (d/div
          #js {:className "dots-game-container no scroll"

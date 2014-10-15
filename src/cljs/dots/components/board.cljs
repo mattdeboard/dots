@@ -20,10 +20,6 @@
   "Component for the game board header."
   [props owner]
   (reify
-    om/IInitState
-    (init-state [_]
-      {:time 60 :score 0})
-
     om/IWillMount
     (will-mount [_]
       (js/setInterval
@@ -41,9 +37,6 @@
 (defn dot [props owner]
   ;; A component for an individual dot on the game board.
   (reify
-    om/IInitState
-    (init-state [_] {:color nil :column 0 :row 0})
-
     om/IWillMount
     (will-mount [_]
       (om/set-state! owner :color (:color props))
@@ -74,7 +67,6 @@
             dots (for [col (range board-size) row (range board-size)]
                    {:column col :row row :color (first (take 1 (rand-colors nil)))})
             grid (om/build-all dot dots)]
-        (. js/console log dots)
         (d/div #js {:className "board-area"}
                (d/div #js {:className "chain-line"})
                (d/div #js {:className "dot-highlights"})
@@ -85,5 +77,5 @@
     om/IRender
     (render [this]
       (d/div #js {:className "dots-game" :id "main"}
-       (om/build header nil)
+       (om/build header nil {:init-state (get-in props [:header])})
        (om/build board-area props)))))

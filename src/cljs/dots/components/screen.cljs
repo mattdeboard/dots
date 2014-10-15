@@ -9,12 +9,10 @@
 (def number-colors (count dot-colors))
 
 (defn rand-colors [exclude-color]
-  (. js/console log "getting colors" (prn-str exclude-color))
   (let [colors (if exclude-color
                  (vec (remove (partial = exclude-color) dot-colors))
                  dot-colors)
         number-colors (if exclude-color (dec number-colors) number-colors)]
-    (. js/console log "getting colors" (prn-str colors))
     (rand-nth colors)
     (map #(get colors (rand-int %))
          (repeat number-colors))))
