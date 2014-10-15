@@ -39,6 +39,7 @@
          (om/build header-col {:title "score" :val score}))))))
 
 (defn dot [props owner]
+  ;; A component for an individual dot on the game board.
   (reify
     om/IInitState
     (init-state [_] {:color nil :column 0 :row 0})

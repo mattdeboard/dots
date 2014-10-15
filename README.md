@@ -1,5 +1,6 @@
 # dots
 
+This is a reimplementation of "Dotsters" as described in Bruce Hauman's [blog post](http://rigsomelight.com/2013/08/12/clojurescript-core-async-dots-game.html)
 
 ## Development
 
