@@ -48,12 +48,12 @@
             :ondrop "return false;"}
        (om/build score-screen
                  {:click-handler #(handle-click % owner cursor)
-                  :header (get cursor :header)
+                  :game-state (get cursor :game-state)
                   :style {:display (if (active? "score-screen" cursor)
                                      "inline" "none")}}
                  {:react-key "score-screen"})
        (om/build game-board
-                 {:header (get cursor :header)
+                 {:game-state (get cursor :game-state)
                   :ui (get cursor :ui)
                   :style {:display (if (active? "game-board" cursor)
                                      "inline" "none")}}

@@ -37,7 +37,7 @@
         (let [timer-id (om/get-state owner :timer-id)]
           (js/clearInterval timer-id)
           (om/transact! cursor :active-view (fn [_] "score-screen"))
-          (om/transact! cursor :game-complete (fn [_] true)))))
+          (om/transact! cursor :game-complete? (fn [_] true)))))
 
     om/IRender
     (render [_]
@@ -103,7 +103,7 @@
        (if (= (get-in props [:style :display]) "inline")
          (om/build header (get props :ui)
                    {:init-state
-                    {:time (get-in props [:header :time])
-                     :score (get-in props [:header :score])
+                    {:time (get-in props [:game-state :time])
+                     :score (get-in props [:game-state :score])
                      :active-view (select-keys props [:ui])}}))
        (om/build board-area props)))))
