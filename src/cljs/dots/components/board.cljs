@@ -23,7 +23,8 @@
     om/IWillMount
     (will-mount [_]
       (js/setInterval
-       (fn [] (om/set-state! owner :time (dec (om/get-state owner :time))))
+       (fn [] (om/transact! props [:header :time] dec))
+       ;; (fn [] (om/set-state! owner :time (dec (om/get-state owner :time))))
        1000))
 
     om/IRender
@@ -31,7 +32,7 @@
       (let [{:keys [time score]} (om/get-state owner)]
         (d/div
          #js {:className "header"}
-         (om/build header-col {:title "time" :val time})
+         (om/build header-col {:title "time" :val (get-in props [:header :time])})
          (om/build header-col {:title "score" :val score}))))))
 
 (defn dot [props owner]
@@ -77,5 +78,5 @@
     om/IRender
     (render [this]
       (d/div #js {:className "dots-game" :id "main"}
-       (om/build header nil {:init-state (get-in props [:header])})
+       (om/build header {:header (:header props)} {:init-state (get-in props [:header])})
        (om/build board-area props)))))

@@ -15,6 +15,10 @@
     (init-state [_]
       {:active "score-screen"})
 
+    om/IWillMount
+    (will-mount [_]
+      (om/set-state! owner :header (:header props)))
+
     om/IWillReceiveProps
     (will-receive-props [this next-props]
       (if (not= (:active next-props) (om/get-state owner :active))
