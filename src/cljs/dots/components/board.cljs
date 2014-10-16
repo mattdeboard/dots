@@ -50,19 +50,75 @@
          (om/build header-col {:title "time" :val time})
          (om/build header-col {:title "score" :val score}))))))
 
+;; (defn reverse-board-position [v] (- (dec board-size) v))
+
+;; (defn coord->dot-pos
+;;   "Convert mouse coordinates to position for a single dot."
+;;   [offset {:keys [x y]}]
+;;   (let [[x y] (map - [x y] offset [13 13])]
+;;     (when (and (< 12 x (+ 12 grid-unit))
+;;                (< 12 y (* board-size grid-unit)))
+;;       (reverse-board-position (int (/ y grid-unit))))))
+
+;; (defn collect-dots [draw-input out-chan board-offset init-msg]
+;;   (go-loop [last-pos nil msg init-msg]
+;;     (when (= :draw (first msg))
+;;       (let [cur-pos (coord->dot-pos board-offset (last msg))]
+;;         (if (and (not (nil? cur-pos)) (not= cur-pos last-pos))
+;;           (put! out-chan [:dot-pos cur-pos]))
+;;         (recur (or cur-pos last-pos) (<! draw-input))))))
+
+;; (defn dot-pos-to-corner-position [dot-pos grid-unit board-size]
+;;   [(+ 23 (* grid-unit (- (dec board-size) dot-pos))) 23])
+
+;; (defn dot-pos-to-center-position [dot-pos grid-unit board-size]
+;;   (vec (map (partial + 10) (dot-pos-to-corner-position dot-pos
+;;                                                        grid-unit
+;;                                                        board-size))))
+
+;; (defn chain-line
+;;   "Component for the line connecting two dots of the same color."
+;;   [props owner]
+;;   (reify
+;;     om/IRender
+;;     (render [_]
+;;       (let [[top left] (dot-pos-to-corner-position
+;;       (d/div #js {:style :foo})))))))
+
+(defn- left-pos [col]
+  (+ 23 (* 45 col)))
+
 (defn dot
   "Component for an individual dot."
   [props owner]
   (reify
+    om/IInitState
+    (init-state [_]
+      (let [left (left-pos (:column props))]
+        (merge (select-keys props [:color :column :row])
+               {:top -112 :left left})))
+
+    om/IWillReceiveProps
+    (will-receive-props [_ next-props]
+      (let [left (left-pos (:column next-props))]
+        (om/set-state! owner
+                       (merge (select-keys next-props [:color :column :row])
+                              {:top -112 :left left}))))
+
     om/IRender
     (render [_]
-      (let [color (:color props)
-            col (:column props)
-            row (:row props)
+      (let [color (om/get-state owner :color)
+            col (om/get-state owner :column)
+            row (om/get-state owner :row)
             className (str "dot levelish " (name color) " level-" row)
-            left (str (+ 23 (* 45 col)) "px")]
+            left (str (om/get-state owner :left) "px")
+            top (str (om/get-state owner :top) "px")]
         (d/div #js {:className className
-                    :style #js {:top "-112px" :left left}})))))
+                    :onMouseDown (fn [_] (log<- "Mouse down!"))
+                    :onMouseOver (fn [_] (log<- (str "Mouse over "
+                                                     (om/get-state owner))))
+                    :onTouchStart (fn [_] (log<- "Touch start!"))
+                    :style #js {:top top :left left}})))))
 
 (defn board-area [props owner]
   (reify
