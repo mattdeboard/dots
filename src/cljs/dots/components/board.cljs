@@ -54,18 +54,6 @@
   "Component for an individual dot."
   [props owner]
   (reify
-    ;; om/IWillMount
-    ;; (will-mount [_]
-    ;;   (om/set-state! owner :color (:color props))
-    ;;   (om/set-state! owner :column (:column props))
-    ;;   (om/set-state! owner :row (:row props)))
-
-    ;; om/IWillReceiveProps
-    ;; (will-receive-props [_ next-props]
-    ;;   (doseq [k [:color :column :row]]
-    ;;     (let [next-k (k next-props)]
-    ;;       (if (not= k next-k) (om/set-state! owner k next-k)))))
-
     om/IRender
     (render [_]
       (let [color (:color props)

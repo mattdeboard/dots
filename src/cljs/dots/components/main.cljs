@@ -11,15 +11,9 @@
 (defn handle-click [e owner cursor]
   (go (>! timer-chan {:topic :game-complete})))
 
-(defn active?
-  "Returns a boolean indicating whether or not the named component is
-  'active'.
-
-  This can be used for multiple reasons, but one is to determine the
-  display style of a component. For example, if this function returns
-  false, then the `:style' would be `{:display \"none\"}'."
-  [name cursor]
-  (= name (get-in cursor [:ui :active-view])))
+(defn display [name owner]
+  (if (= name (om/get-state owner :active-view))
+    "inline" "none"))
 
 (defn switch-screen [owner]
   (let [current-view (om/get-state owner :active-view)]
@@ -57,12 +51,10 @@
        (om/build score-screen
                  {:game-state (get props :game-state)
                   :click-handler #(handle-click % owner props)
-                  :style {:display (if (active? "score-screen" props)
-                                     "inline" "none")}}
+                  :style {:display (display "score-screen" owner)}}
                  {:react-key "score-screen"})
        (om/build game-board
                  {:game-state (get props :game-state)
                   :ui (get props :ui)
-                  :style {:display (if (active? "game-board" props)
-                                     "inline" "none")}}
+                  :style {:display (display "game-board" owner)}}
                  {:react-key "game-board"})))))
