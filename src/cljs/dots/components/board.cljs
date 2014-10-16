@@ -90,18 +90,17 @@
                        (merge (select-keys next-props [:color :column :row])
                               {:top -112 :left left}))))
 
-    om/IRender
-    (render [_]
-      (let [color (om/get-state owner :color)
-            col (om/get-state owner :column)
-            row (om/get-state owner :row)
+    om/IRenderState
+    (render-state [_ state]
+      (let [color (:color state)
+            col (:column state)
+            row (:row state)
             className (str "dot levelish " (name color) " level-" row)
-            left (str (om/get-state owner :left) "px")
-            top (str (om/get-state owner :top) "px")]
+            left (str (:left state) "px")
+            top (str (:top state) "px")]
         (d/div #js {:className className
                     :onMouseDown (fn [_] (log<- "Mouse down!"))
-                    :onMouseOver (fn [_] (log<- (str "Mouse over "
-                                                     (om/get-state owner))))
+                    :onMouseOver (fn [_] (log<- (str "Mouse over " state)))
                     :onTouchStart (fn [_] (log<- "Touch start!"))
                     :style #js {:top top :left left}})))))
 
@@ -111,7 +110,8 @@
     (render [this]
       (let [board-size (get-in props [:ui :board-size])
             dots (for [col (range board-size) row (range board-size)]
-                   {:column col :row row :color (first (take 1 (rand-colors nil)))})
+                   {:column col :row row
+                    :color (first (take 1 (rand-colors nil)))})
             grid (om/build-all dot dots)]
         (d/div
          #js {:className "board-area"}
