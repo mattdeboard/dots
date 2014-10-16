@@ -38,12 +38,14 @@
   (= name (get-in cursor [:ui :active-view])))
 
 (defn switch-active-view [channel owner]
-  (let [current-view (om/get-state owner :active-view)
-        next-view (if (= current-view "game-board")
-                    "score-screen" "game-board")]
-    (log<- {:awesome? "Confirmed"})))
-    ;;   (om/set-state! owner :active-view next-view))
-    ;; (recur)
+  (go-loop []
+    (let [current-view (om/get-state owner :active-view)
+          next-view (if (= current-view "game-board")
+                      "score-screen" "game-board")
+          topic (<! channel)]
+      (log<- {:current current-view :next next-view})
+      (om/set-state! owner {:active-view next-view}))
+    (recur)))
 
 (defn game-container [props owner]
   (reify
@@ -63,16 +65,6 @@
 
     om/IRender
     (render [_]
-      ;; (let [timer-chan (om/get-shared owner :tx-chan)
-      ;;       chan-val (go (<! timer-chan))]
-      ;;   (if (= chan-val "game-complete")
-      ;;     (om/transact!
-      ;;      props :ui
-      ;;      (fn [m]
-      ;;        (merge m {:active-view (if (= (:active-view m)
-      ;;                                      "score-screen")
-      ;;                                 "game-board"
-      ;;                                 "score-screen")}))))
       (d/div
        #js {:className "dots-game-container no scroll"
             :ondragstart "return false;"
