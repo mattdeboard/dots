@@ -42,7 +42,6 @@
                    (str "SCORE " (:score game-state))
                    "SCORE")
             cword (om/build-all color-letter (colorize-word word))]
-        (log<- game-state)
         (apply d/div #js {:className "marq"} cword)))))
 
 (defn control-area

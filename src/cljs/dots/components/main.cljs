@@ -1,9 +1,12 @@
 (ns dots.components.main
-  (:require [dots.components.board :refer [game-board]]
+  (:require [cljs.core.async :as async :refer [chan <!]]
+            ; [dots.chans :refer [timer-chan]]
+            [dots.components.board :refer [game-board]]
             [dots.components.screen :refer [score-screen]]
             [dots.utils :refer [log<-]]
             [om.core :as om :include-macros true]
-            [om.dom :as d :include-macros true]))
+            [om.dom :as d :include-macros true])
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (defn handle-click [e owner cursor]
   (let [active (if (= (om/get-state owner :active-view) "score-screen")
@@ -34,10 +37,22 @@
   [name cursor]
   (= name (get-in cursor [:ui :active-view])))
 
+(defn switch-active-view [channel owner]
+  (let [current-view (om/get-state owner :active-view)
+        next-view (if (= current-view "game-board")
+                    "score-screen" "game-board")]
+    (log<- {:awesome? "Confirmed"})))
+    ;;   (om/set-state! owner :active-view next-view))
+    ;; (recur)
+
 (defn game-container [props owner]
   (reify
     om/IWillMount
     (will-mount [_]
+      (let [shared-chan (om/get-shared owner :timer-pub-chan)
+            timer-sub-chan (chan)]
+        (async/sub shared-chan :game-complete timer-sub-chan)
+        (switch-active-view timer-sub-chan owner))
       (om/set-state! owner :active-view (get-in props [:ui :active-view])))
 
     om/IWillReceiveProps
@@ -48,6 +63,16 @@
 
     om/IRender
     (render [_]
+      ;; (let [timer-chan (om/get-shared owner :tx-chan)
+      ;;       chan-val (go (<! timer-chan))]
+      ;;   (if (= chan-val "game-complete")
+      ;;     (om/transact!
+      ;;      props :ui
+      ;;      (fn [m]
+      ;;        (merge m {:active-view (if (= (:active-view m)
+      ;;                                      "score-screen")
+      ;;                                 "game-board"
+      ;;                                 "score-screen")}))))
       (d/div
        #js {:className "dots-game-container no scroll"
             :ondragstart "return false;"

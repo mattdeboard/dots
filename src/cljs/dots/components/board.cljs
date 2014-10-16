@@ -1,8 +1,11 @@
 (ns dots.components.board
-  (:require [dots.components.screen :refer [rand-colors]]
+  (:require [cljs.core.async :as async :refer [>! <! chan]]
+            [dots.chans :refer [timer-chan]]
+            [dots.components.screen :refer [rand-colors]]
             [dots.utils :refer [log<-]]
             [om.core :as om :include-macros true]
-            [om.dom :as d :include-macros true]))
+            [om.dom :as d :include-macros true])
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (defn header-col
   "Component for individual column headers (i.e. Time and Score)."
@@ -37,11 +40,8 @@
       (if (= (:time prev-state) 0)
         (let [timer-id (om/get-state owner :timer-id)]
           (js/clearInterval timer-id)
-          (om/transact! (get cursor :game-state)
-                        (fn [m] (merge m {:score (inc (:score m))
-                                          :game-complete? true})))
-          (om/transact! (get cursor :ui)
-                        (fn [m] (merge m {:active-view "score-screen"}))))))
+          (go (>! timer-chan {:topic :game-complete})))
+        (go (>! timer-chan {:topic :test-only}))))
 
     om/IRender
     (render [_]
