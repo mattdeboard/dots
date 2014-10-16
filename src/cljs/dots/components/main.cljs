@@ -29,7 +29,7 @@
   (go-loop []
     (let [next-view (switch-screen owner)
           topic (<! channel)]
-      (om/set-state! owner :active-view next-view)
+      (om/set-state! owner :active-view next-view))
     (recur)))
 
 (defn game-container [props owner]
