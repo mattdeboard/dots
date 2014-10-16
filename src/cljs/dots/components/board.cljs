@@ -50,43 +50,28 @@
          (om/build header-col {:title "time" :val time})
          (om/build header-col {:title "score" :val score}))))))
 
-;; (defn reverse-board-position [v] (- (dec board-size) v))
-
-;; (defn coord->dot-pos
-;;   "Convert mouse coordinates to position for a single dot."
-;;   [offset {:keys [x y]}]
-;;   (let [[x y] (map - [x y] offset [13 13])]
-;;     (when (and (< 12 x (+ 12 grid-unit))
-;;                (< 12 y (* board-size grid-unit)))
-;;       (reverse-board-position (int (/ y grid-unit))))))
-
-;; (defn collect-dots [draw-input out-chan board-offset init-msg]
-;;   (go-loop [last-pos nil msg init-msg]
-;;     (when (= :draw (first msg))
-;;       (let [cur-pos (coord->dot-pos board-offset (last msg))]
-;;         (if (and (not (nil? cur-pos)) (not= cur-pos last-pos))
-;;           (put! out-chan [:dot-pos cur-pos]))
-;;         (recur (or cur-pos last-pos) (<! draw-input))))))
-
-;; (defn dot-pos-to-corner-position [dot-pos grid-unit board-size]
-;;   [(+ 23 (* grid-unit (- (dec board-size) dot-pos))) 23])
-
-;; (defn dot-pos-to-center-position [dot-pos grid-unit board-size]
-;;   (vec (map (partial + 10) (dot-pos-to-corner-position dot-pos
-;;                                                        grid-unit
-;;                                                        board-size))))
-
-;; (defn chain-line
-;;   "Component for the line connecting two dots of the same color."
-;;   [props owner]
-;;   (reify
-;;     om/IRender
-;;     (render [_]
-;;       (let [[top left] (dot-pos-to-corner-position
-;;       (d/div #js {:style :foo})))))))
-
 (defn- left-pos [col]
   (+ 23 (* 45 col)))
+
+(defn adjacent? [dot1 dot2]
+  (if (or
+       ;; horizontal adjacency: same row, different columns
+       (and (= (:row dot1) (:row dot2))
+            (= 1 (. js/Math abs (- (:column dot1) (:column dot2)))))
+       ;; vertical adjacency: same column, different rows
+       (and (= 1 (. js/Math abs (- (:row dot1) (:row dot2))))
+            (= (:column dot1) (:column dot2))))
+    true false))
+
+(defn dot-trace
+  "Reads from `channel', accumulating a vector of dot states in order to
+  create a chain-line between the dots."
+  [owner channel]
+  (go-loop [dots [(om/get-state owner)]]
+    (let [next-dot (<! channel)]
+      (if (adjacent? (last dots) next-dot)
+        (recur (merge dots next-dot))
+        (recur dots)))))
 
 (defn dot
   "Component for an individual dot."
