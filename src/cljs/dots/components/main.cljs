@@ -18,6 +18,8 @@
                    next-view (if (= current-view "score-screen")
                                "game-board" "score-screen")]
                (merge m {:active-view next-view}))))
+    ;; We need to reset game state back to the proper values when clicking on
+    ;; the "new game" button at the end of the game.
     (om/transact!
      cursor :game-state
      (fn [m] (merge m {:score 0 :game-complete? false})))))
