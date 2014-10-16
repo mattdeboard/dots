@@ -8,13 +8,6 @@
         (let [[value ch] (alts! chans)]
           (if (pred value) value (recur))))))
 
-(defn click-chan [selector msg-name]
-  (let [rc (chan)
-        handler (fn [e] (jq/prevent e) (put! rc [msg-name]))]
-    (on ($ "body") :click selector {} handler)
-    (on ($ "body") "touchend" selector {} handler)
-    rc))
-
 (defn mouseevent-chan [rc selector event msg-name]
   (bind ($ selector) event
         #(do
@@ -57,3 +50,5 @@
     out-chan))
 
 (def timer-chan (chan))
+
+(def click-chan (chan))
