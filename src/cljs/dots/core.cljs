@@ -8,7 +8,7 @@
             [om.dom :as d :include-macros true]))
 
 (def app-state (atom {:ui {:active-view "score-screen" :board-size 6}
-                      :game-state {:time 1 :score 0 :game-complete? false}}))
+                      :game-state {:time 60 :score 0 :game-complete? false}}))
 
 (om/root
  (fn [app owner]
