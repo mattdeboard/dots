@@ -17,7 +17,10 @@
      (fn [m] (let [current-view (:active-view m)
                    next-view (if (= current-view "score-screen")
                                "game-board" "score-screen")]
-               (merge m {:active-view next-view}))))))
+               (merge m {:active-view next-view}))))
+    (om/transact!
+     cursor :game-state
+     (fn [m] (merge m {:score 0 :game-complete? false})))))
 
 (defn active?
   "Returns a boolean indicating whether or not the named component is

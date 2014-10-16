@@ -38,7 +38,8 @@
         (let [timer-id (om/get-state owner :timer-id)]
           (js/clearInterval timer-id)
           (om/transact! (get cursor :game-state)
-                        (fn [m] (merge m {:game-complete? true})))
+                        (fn [m] (merge m {:score (inc (:score m))
+                                          :game-complete? true})))
           (om/transact! (get cursor :ui)
                         (fn [m] (merge m {:active-view "score-screen"}))))))
 
