@@ -50,7 +50,6 @@
        (om/build score-screen
                  {:game-state (get props :game-state)
                   :click-handler #(handle-click % owner props)
-                  :game-state (get props :game-state)
                   :style {:display (if (active? "score-screen" props)
                                      "inline" "none")}}
                  {:react-key "score-screen"})

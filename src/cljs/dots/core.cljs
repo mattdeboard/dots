@@ -3,6 +3,7 @@
             [dots.components.main :refer [game-container]]
             [dots.components.screen :refer [rand-colors]]
             [dots.dev :refer [is-dev?]]
+            [dots.utils :refer [log<-]]
             [om.core :as om :include-macros true]
             [om.dom :as d :include-macros true]))
 

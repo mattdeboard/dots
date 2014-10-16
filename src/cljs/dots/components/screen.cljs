@@ -19,7 +19,10 @@
          (repeat number-colors))))
 
 (defn colorize-word [word]
-  (map (fn [x c] {:color (name c) :letter x}) word (rand-colors nil)))
+  (map (fn [x c]
+         ;; Exclude spaces from colorization
+         {:color (if (not= " " x) (name c) :blank) :letter x})
+       word (rand-colors nil)))
 
 ;; Components
 (defn color-letter [props owner]
@@ -34,8 +37,13 @@
   (reify
     om/IRender
     (render [_]
-      (let [word (om/build-all color-letter (colorize-word "SCORE"))]
-        (apply d/div #js {:className "marq"} word)))))
+      (let [game-state (:game-state props)
+            word (if (:game-complete? game-state)
+                   (str "SCORE " (:score game-state))
+                   "SCORE")
+            cword (om/build-all color-letter (colorize-word word))]
+        (log<- game-state)
+        (apply d/div #js {:className "marq"} cword)))))
 
 (defn control-area
   "Component for the portion of the DOM containing interactive stuff
@@ -68,5 +76,5 @@
             :style (clj->js (:style props))}
        (d/div
         #js {:className "notice-square"}
-        (om/build marquee nil)
+        (om/build marquee {:game-state (get props :game-state)})
         (om/build control-area (om/get-props owner)))))))
