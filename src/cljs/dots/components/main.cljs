@@ -1,6 +1,6 @@
 (ns dots.components.main
   (:require [cljs.core.async :as async :refer [chan <!]]
-            ; [dots.chans :refer [timer-chan]]
+            [dots.chans :refer [timer-chan]]
             [dots.components.board :refer [game-board]]
             [dots.components.screen :refer [score-screen]]
             [dots.utils :refer [log<-]]
@@ -9,23 +9,7 @@
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (defn handle-click [e owner cursor]
-  (let [active (if (= (om/get-state owner :active-view) "score-screen")
-                 "game-board" "score-screen")]
-    (om/transact!
-     cursor :ui
-     ;; We need to update the value of `(get-in cursor [:ui :active-view])',
-     ;; and ths is the only way I know of to do that. Inside the transaction
-     ;; handler, we get the current view, switch to the opposite view, then
-     ;; return a hashmap that updates `:active-view'.
-     (fn [m] (let [current-view (:active-view m)
-                   next-view (if (= current-view "score-screen")
-                               "game-board" "score-screen")]
-               (merge m {:active-view next-view}))))
-    ;; We need to reset game state back to the proper values when clicking on
-    ;; the "new game" button at the end of the game.
-    (om/transact!
-     cursor :game-state
-     (fn [m] (merge m {:score 0 :game-complete? false})))))
+  (go (>! timer-chan {:topic :game-complete})))
 
 (defn active?
   "Returns a boolean indicating whether or not the named component is
@@ -37,14 +21,15 @@
   [name cursor]
   (= name (get-in cursor [:ui :active-view])))
 
+(defn switch-screen [owner]
+  (let [current-view (om/get-state owner :active-view)]
+    (if (= current-view "game-board") "score-screen" "game-board")))
+
 (defn switch-active-view [channel owner]
   (go-loop []
-    (let [current-view (om/get-state owner :active-view)
-          next-view (if (= current-view "game-board")
-                      "score-screen" "game-board")
+    (let [next-view (switch-screen owner)
           topic (<! channel)]
-      (log<- {:current current-view :next next-view})
-      (om/set-state! owner {:active-view next-view}))
+      (om/set-state! owner :active-view next-view)
     (recur)))
 
 (defn game-container [props owner]
@@ -61,7 +46,7 @@
     (will-receive-props [this next-props]
       (let [view (get-in next-props [:ui :active-view])]
         (if (not= view (om/get-state owner :active-view))
-          (om/set-state! owner {:active-view view}))))
+          (om/set-state! owner :active-view view))))
 
     om/IRender
     (render [_]

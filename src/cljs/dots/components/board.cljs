@@ -40,8 +40,7 @@
       (if (= (:time prev-state) 0)
         (let [timer-id (om/get-state owner :timer-id)]
           (js/clearInterval timer-id)
-          (go (>! timer-chan {:topic :game-complete})))
-        (go (>! timer-chan {:topic :test-only}))))
+          (go (>! timer-chan {:topic :game-complete})))))
 
     om/IRender
     (render [_]
