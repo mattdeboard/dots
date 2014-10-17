@@ -120,34 +120,42 @@
          (om/build header-col {:title "time" :val time})
          (om/build header-col {:title "score" :val score}))))))
 
+(defn- make-className [props]
+  (let [color (:color props)
+        row (:row props)]
+    (str "dot levelish " (name color) " level-" row)))
+
 (defn dot
   "Component for an individual dot."
   [props owner]
   (reify
     om/IInitState
     (init-state [_]
-      (let [left (left-pos (:column props))]
+      (let [left (left-pos (:column props))
+            class-name (make-className props)]
+        (. js/console log class-name)
         (merge (select-keys props [:color :column :row])
-               {:top -112 :left left})))
+               {:top -112 :left left :class-name class-name})))
 
     om/IWillReceiveProps
     (will-receive-props [_ next-props]
-      (let [left (left-pos (:column next-props))]
+      (let [left (left-pos (:column next-props))
+            class-name (make-className next-props)]
         (om/set-state! owner
                        (merge (select-keys next-props [:color :column :row])
-                              {:top -112 :left left}))))
+                              {:top -112 :left left :class-name class-name}))))
 
     om/IRenderState
     (render-state [_ state]
       (let [color (:color state)
             col (:column state)
             row (:row state)
-            className (str "dot levelish " (name color) " level-" row)
+            class-name (:class-name state)
             left (str (:left state) "px")
             top (str (:top state) "px")
             handler (fn [event value state]
                       (go (>! click-chan {:topic value :dot-state state})))]
-        (d/div #js {:className className
+        (d/div #js {:className class-name
                     :onMouseDown #(handler % :mouse-down state)
                     :onMouseOver #(handler % :mouse-over state)
                     :onMouseUp #(handler % :mouse-up state)
