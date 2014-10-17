@@ -45,10 +45,18 @@
   "Reads from `channel', accumulating a vector of dot states in order to
   create a chain-line between the dots."
   [channel owner]
-  (go-loop [dots [] -orientation false]
-    ;; `next-dot' is the state of the dot upon which the user clicked to
-    ;; cause the event.
-    (let [next-dot (:dot-state (<! channel))
+  ;; The loop params are hopefully self-explanatory but just in case:
+  ;;   - `-orientation': This gives us the capacity to know which way we were
+  ;;     creating a chain line last go 'round, so that we can make decisions
+  ;;     about "adjacency". Please see the comments/docstring for `orient'.
+
+  ;;  - `dragging?': This gives us some capacity to determine whether or not the
+  ;;    user is in the process of attempting to build a chain line. The value
+  ;;    starts as `false', then when a mouse-down event is detected, this is
+  ;;    changed to `true'. When a mouse-up event is detected, this is changed
+  ;;    back to `false'.
+  (go-loop [dots [] -orientation false dragging? false]
+    (let [{next-dot :dot-state event-type :topic} (<! channel)
           start (if (> (count dots) 1) (first dots) next-dot)
           end (if (> (count dots) 1) (last dots) next-dot)
           orientation (orient (last dots) next-dot -orientation)
@@ -65,7 +73,9 @@
            ;; Otherwise, just start over.
            :else [[next-dot] {}])]
       (om/set-state! owner :chain chain-val)
-      (recur next-val orientation))))
+      (recur next-val orientation
+             (cond dragging? (if (= :mouse-up event-type) false true)
+                   :else (= :mouse-down event-type) true false)))))
 
 (defn header-col
   "Component for individual column headers (i.e. Time and Score)."
@@ -147,6 +157,7 @@
   (reify
     om/IRender
     (render [_]
+      ;; TODO: Flesh out how the dimensions of this thing are fleshed out.
       (let [top nil
             left nil
             width nil
