@@ -34,10 +34,7 @@
      ;; vertical adjacency: same column, different rows
      (and (= 1 (abs (- (:row dot1) (:row dot2))))
           (= (:column dot1) (:column dot2)))
-     :vertical
-
-     ;; no adjacency
-     :default false)))
+     :vertical)))
 
 (defn dot-trace
   "Reads from `channel', accumulating a vector of dot states in order to
@@ -47,16 +44,12 @@
     ;; `next-dot' is the state of the dot upon which the user clicked to
     ;; cause the event.
     (let [next-dot (:dot-state (<! channel))
-          start (if (> (count dots) 1) (first dots))
-          end (if start (last dots))
+          start (if (> (count dots) 1) (first dots) next-dot)
+          end (if (> (count dots) 1) (last dots) next-dot)
           orientation (orient (last dots) next-dot)
           [next-val chain-val]
           (cond
-           ;; If `dots' is empty, return a new 1-vector containing just
-           ;; `next-dot'.
-           (empty? dots) [[next-dot] {}]
-
-           ;; If dots is not empty, and the last dot in `dots' and `next-dot'
+           ;; If the last dot in `dots' and `next-dot'
            ;; are adjacent, conj `dots' and `next-dot', and start building the
            ;; chain state.
 
@@ -67,15 +60,10 @@
            orientation [(merge dots next-dot)
                         {:color (:color (last dots))
                          :orientation orientation
-                         :length (count dots)
+                         :length (inc (count dots))
                          :start start :end end}]
 
-           ;; Otherwise, if `dots' isn't empty, but there's
-           ;; no adjacency, just return `dots'.
-
-           ;; TODO: Should just return `(first dots)', or
-           ;; something.
-           :else [dots {}])]
+           :else [[next-dot] {}])]
       (om/set-state! owner :chain chain-val)
       (recur next-val))))
 
@@ -148,7 +136,6 @@
             left (str (:left state) "px")
             top (str (:top state) "px")
             handler (fn [event value state]
-                      (log<- (.-target event))
                       (go (>! click-chan {:topic value :dot-state state})))]
         (d/div #js {:className className
                     :onMouseDown #(handler % :mouse-down state)
