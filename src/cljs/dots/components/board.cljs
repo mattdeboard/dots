@@ -11,20 +11,21 @@
 (defn- left-pos [col]
   (+ 23 (* 45 col)))
 
-(defn adjacent? [dot1 dot2]
-  (let [abs #(. js/Math abs %)]
-  (if (or
-       ;; horizontal adjacency: same row, different columns
-       (and (= (:row dot1) (:row dot2))
-            (= 1 (abs (- (:column dot1) (:column dot2)))))
-       ;; vertical adjacency: same column, different rows
-       (and (= 1 (abs (- (:row dot1) (:row dot2))))
-            (= (:column dot1) (:column dot2))))
-    true false)))
+(defn orient
+  "Check for the adjacency of two dots.
 
-(defn adjacence [dot1 dot2]
+  If the dots are adjacent, return `:horizontal' or `:vertical' to
+  indicate orientation.
+
+  Otherwise, return `false'."
+  [dot1 dot2]
   (let [abs #(. js/Math abs %)]
     (cond
+     ;; if colors aren't equivalent, then for my purposes here, the dots are
+     ;; not adjacent.
+     (not= (:color dot1) (:color dot2))
+     false
+
      ;; horizontal adjacency: same row, different columns
      (and (= (:row dot1) (:row dot2))
           (= 1 (abs (- (:column dot1) (:column dot2)))))
@@ -33,7 +34,50 @@
      ;; vertical adjacency: same column, different rows
      (and (= 1 (abs (- (:row dot1) (:row dot2))))
           (= (:column dot1) (:column dot2)))
-     :vertical)))
+     :vertical
+
+     ;; no adjacency
+     :default false)))
+
+(defn dot-trace
+  "Reads from `channel', accumulating a vector of dot states in order to
+  create a chain-line between the dots."
+  [channel owner]
+  (go-loop [dots []]
+    ;; `next-dot' is the state of the dot upon which the user clicked to
+    ;; cause the event.
+    (let [next-dot (:dot-state (<! channel))
+          start (if (> (count dots) 1) (first dots))
+          end (if start (last dots))
+          orientation (orient (last dots) next-dot)
+          [next-val chain-val]
+          (cond
+           ;; If `dots' is empty, return a new 1-vector containing just
+           ;; `next-dot'.
+           (empty? dots) [[next-dot] {}]
+
+           ;; If dots is not empty, and the last dot in `dots' and `next-dot'
+           ;; are adjacent, conj `dots' and `next-dot', and start building the
+           ;; chain state.
+
+           ;; TODO: Probably need to build the chain state in the response to
+           ;; the `empty?' condition check. Otherwise 5-unit chain lines will
+           ;; only have a length of 4. In other words, I'm effectively
+           ;; zero-indexing the chain line.
+           orientation [(merge dots next-dot)
+                        {:color (:color (last dots))
+                         :orientation orientation
+                         :length (count dots)
+                         :start start :end end}]
+
+           ;; Otherwise, if `dots' isn't empty, but there's
+           ;; no adjacency, just return `dots'.
+
+           ;; TODO: Should just return `(first dots)', or
+           ;; something.
+           :else [dots {}])]
+      (om/set-state! owner :chain chain-val)
+      (recur next-val))))
 
 (defn header-col
   "Component for individual column headers (i.e. Time and Score)."
@@ -112,31 +156,6 @@
                     :onMouseUp #(handler % :mouse-up state)
                     :style #js {:top top :left left}})))))
 
-(defn dot-trace
-  "Reads from `channel', accumulating a vector of dot states in order to
-  create a chain-line between the dots."
-  [channel owner]
-  (go-loop [dots []]
-    (let [next-dot (:dot-state (<! channel))
-          start (if (> (count dots) 1) (first dots))
-          end (if start (last dots))
-          adj? (and (adjacent? (last dots) next-dot)
-                    (= (:color (last dots)) (:color next-dot)))
-          [next-val chain-val] (cond
-                                (empty? dots) [[next-dot] {}]
-                                adj? [(merge dots next-dot)
-                                      {:color (:color (last dots))
-                                       :orientation (adjacence (last dots)
-                                                               next-dot)
-                                       :start start :end end}]
-                                :else [dots {}])]
-      (log<- (str "Next dot: " next-dot))
-      (log<- (str "Dots: " dots))
-      (log<- (str "Adjacent? " adj?))
-      (log<- (str "Chain Val: " chain-val))
-      (om/set-state! owner :chain chain-val)
-      (recur next-val))))
-
 (defn chain-line [props owner]
   (reify
     om/IRender
@@ -197,6 +216,8 @@
        ;; Only render the header if we're the active element on the page.
        ;; This way, the timer doesn't start until it's visible on the page.
        ;; Honestly this feels a little hacky.
+
+       ;; TODO: Start the timer via channels to ditch the 'hacky' feel.
        (if (= (get-in props [:style :display]) "inline")
          (om/build header {:ui (get props :ui)
                            :game-state (get props :game-state)}
