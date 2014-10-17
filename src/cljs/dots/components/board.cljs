@@ -1,11 +1,26 @@
 (ns dots.components.board
   (:require [cljs.core.async :as async :refer [>! <! chan]]
-            [dots.chans :refer [timer-chan]]
+            [clojure.string :refer [join]]
+            [dots.chans :refer [timer-chan click-chan]]
             [dots.components.screen :refer [rand-colors]]
             [dots.utils :refer [log<-]]
             [om.core :as om :include-macros true]
             [om.dom :as d :include-macros true])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
+
+(defn- left-pos [col]
+  (+ 23 (* 45 col)))
+
+(defn adjacent? [dot1 dot2]
+  (let [abs #(. js/Math abs %)]
+  (if (or
+       ;; horizontal adjacency: same row, different columns
+       (and (= (:row dot1) (:row dot2))
+            (= 1 (abs (- (:column dot1) (:column dot2)))))
+       ;; vertical adjacency: same column, different rows
+       (and (= 1 (abs (- (:row dot1) (:row dot2))))
+            (= (:column dot1) (:column dot2))))
+    true false)))
 
 (defn header-col
   "Component for individual column headers (i.e. Time and Score)."
@@ -50,28 +65,18 @@
          (om/build header-col {:title "time" :val time})
          (om/build header-col {:title "score" :val score}))))))
 
-(defn- left-pos [col]
-  (+ 23 (* 45 col)))
-
-(defn adjacent? [dot1 dot2]
-  (if (or
-       ;; horizontal adjacency: same row, different columns
-       (and (= (:row dot1) (:row dot2))
-            (= 1 (. js/Math abs (- (:column dot1) (:column dot2)))))
-       ;; vertical adjacency: same column, different rows
-       (and (= 1 (. js/Math abs (- (:row dot1) (:row dot2))))
-            (= (:column dot1) (:column dot2))))
-    true false))
-
-(defn dot-trace
-  "Reads from `channel', accumulating a vector of dot states in order to
-  create a chain-line between the dots."
-  [owner channel]
-  (go-loop [dots [(om/get-state owner)]]
-    (let [next-dot (<! channel)]
-      (if (adjacent? (last dots) next-dot)
-        (recur (merge dots next-dot))
-        (recur dots)))))
+(defn chain-line [props owner]
+  (reify
+    om/IRender
+    (render [_]
+      (let [top nil
+            left nil
+            width nil
+            height nil
+            color nil
+            orientation nil]
+        (d/div #js {:style {:top top :left left :width width :height height}
+                    :className (join " " ["line" color orientation])})))))
 
 (defn dot
   "Component for an individual dot."
@@ -104,8 +109,32 @@
                     :onTouchStart (fn [_] (log<- "Touch start!"))
                     :style #js {:top top :left left}})))))
 
+(defn dot-trace
+  "Reads from `channel', accumulating a vector of dot states in order to
+  create a chain-line between the dots."
+  [owner channel]
+  (go-loop [dots [(om/get-state owner)]]
+    (let [next-dot (<! channel)
+          start (if (> (count dots) 1) (first dots))
+          end (if start (last dots))]
+      (if (adjacent? (last dots) next-dot)
+        (do
+          (om/update-state! owner :chain {:start start :end end})
+          (recur (merge dots next-dot)))
+        (recur dots)))))
+
 (defn board-area [props owner]
   (reify
+    om/IInitState
+    (init-state [_] {})
+
+    om/IWillMount
+    (will-mount [_]
+      (let [click-pub (om/get-shared owner :click-pub-chan)
+            click-sub-chan (chan)]
+        (for [e [:mouse-down :mouse-up :mouse-over]]
+          (async/sub click-pub e click-sub-chan))))
+
     om/IRender
     (render [this]
       (let [board-size (get-in props [:ui :board-size])

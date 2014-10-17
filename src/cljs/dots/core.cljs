@@ -9,7 +9,7 @@
             [om.dom :as d :include-macros true])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
-(def app-state (atom {:ui {:active-view "score-screen" :board-size 6}
+(def app-state (atom {:ui {:active-view "score-screen" :board-size 0}
                       :game-state {:time 900 :score 0 :game-complete? false}}))
 
 (om/root
