@@ -18,54 +18,54 @@
   indicate orientation.
 
   Otherwise, return `false'."
-  [dot1 dot2]
-  (let [abs #(. js/Math abs %)]
-    (cond
-     ;; if colors aren't equivalent, then for my purposes here, the dots are
-     ;; not adjacent.
-     (not= (:color dot1) (:color dot2))
-     false
+  ([dot1 dot2] (let [abs #(. js/Math abs %)]
+                 (cond
+                  ;; if colors aren't equivalent, then for my purposes here, the
+                  ;; dots are not adjacent.
+                  (not= (:color dot1) (:color dot2))
+                  false
 
-     ;; horizontal adjacency: same row, different columns
-     (and (= (:row dot1) (:row dot2))
-          (= 1 (abs (- (:column dot1) (:column dot2)))))
-     :horizontal
+                  ;; horizontal adjacency: same row, different columns
+                  (and (= (:row dot1) (:row dot2))
+                       (= 1 (abs (- (:column dot1) (:column dot2)))))
+                  :horizontal
 
-     ;; vertical adjacency: same column, different rows
-     (and (= 1 (abs (- (:row dot1) (:row dot2))))
-          (= (:column dot1) (:column dot2)))
-     :vertical)))
+                  ;; vertical adjacency: same column, different rows
+                  (and (= 1 (abs (- (:row dot1) (:row dot2))))
+                       (= (:column dot1) (:column dot2)))
+                  :vertical)))
+
+  ([dot1 dot2 orientation]
+     (cond
+      (false? orientation) (orient dot1 dot2)
+      (= orientation (orient dot1 dot2)) orientation
+      :else false)))
 
 (defn dot-trace
   "Reads from `channel', accumulating a vector of dot states in order to
   create a chain-line between the dots."
   [channel owner]
-  (go-loop [dots []]
+  (go-loop [dots [] -orientation false]
     ;; `next-dot' is the state of the dot upon which the user clicked to
     ;; cause the event.
     (let [next-dot (:dot-state (<! channel))
           start (if (> (count dots) 1) (first dots) next-dot)
           end (if (> (count dots) 1) (last dots) next-dot)
-          orientation (orient (last dots) next-dot)
+          orientation (orient (last dots) next-dot -orientation)
           [next-val chain-val]
           (cond
-           ;; If the last dot in `dots' and `next-dot'
-           ;; are adjacent, conj `dots' and `next-dot', and start building the
-           ;; chain state.
-
-           ;; TODO: Probably need to build the chain state in the response to
-           ;; the `empty?' condition check. Otherwise 5-unit chain lines will
-           ;; only have a length of 4. In other words, I'm effectively
-           ;; zero-indexing the chain line.
+           ;; If the last dot in `dots' and `next-dot' are adjacent, conj `dots'
+           ;; and `next-dot', and start building the chain state.
            orientation [(merge dots next-dot)
                         {:color (:color (last dots))
                          :orientation orientation
                          :length (inc (count dots))
                          :start start :end end}]
 
+           ;; Otherwise, just start over.
            :else [[next-dot] {}])]
       (om/set-state! owner :chain chain-val)
-      (recur next-val))))
+      (recur next-val orientation))))
 
 (defn header-col
   "Component for individual column headers (i.e. Time and Score)."
