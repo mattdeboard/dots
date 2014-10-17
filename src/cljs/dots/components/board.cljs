@@ -22,6 +22,19 @@
             (= (:column dot1) (:column dot2))))
     true false)))
 
+(defn adjacence [dot1 dot2]
+  (let [abs #(. js/Math abs %)]
+    (cond
+     ;; horizontal adjacency: same row, different columns
+     (and (= (:row dot1) (:row dot2))
+          (= 1 (abs (- (:column dot1) (:column dot2)))))
+     :horizontal
+
+     ;; vertical adjacency: same column, different rows
+     (and (= 1 (abs (- (:row dot1) (:row dot2))))
+          (= (:column dot1) (:column dot2)))
+     :vertical)))
+
 (defn header-col
   "Component for individual column headers (i.e. Time and Score)."
   [props owner]
@@ -65,19 +78,6 @@
          (om/build header-col {:title "time" :val time})
          (om/build header-col {:title "score" :val score}))))))
 
-(defn chain-line [props owner]
-  (reify
-    om/IRender
-    (render [_]
-      (let [top nil
-            left nil
-            width nil
-            height nil
-            color nil
-            orientation nil]
-        (d/div #js {:style {:top top :left left :width width :height height}
-                    :className (join " " ["line" color orientation])})))))
-
 (defn dot
   "Component for an individual dot."
   [props owner]
@@ -102,41 +102,77 @@
             row (:row state)
             className (str "dot levelish " (name color) " level-" row)
             left (str (:left state) "px")
-            top (str (:top state) "px")]
+            top (str (:top state) "px")
+            handler (fn [event value state]
+                      (log<- (.-target event))
+                      (go (>! click-chan {:topic value :dot-state state})))]
         (d/div #js {:className className
-                    :onMouseDown (fn [_] (log<- "Mouse down!"))
-                    :onMouseOver (fn [_] (log<- (str "Mouse over " state)))
-                    :onTouchStart (fn [_] (log<- "Touch start!"))
+                    :onMouseDown #(handler % :mouse-down state)
+                    :onMouseOver #(handler % :mouse-over state)
+                    :onMouseUp #(handler % :mouse-up state)
                     :style #js {:top top :left left}})))))
 
 (defn dot-trace
   "Reads from `channel', accumulating a vector of dot states in order to
   create a chain-line between the dots."
-  [owner channel]
-  (go-loop [dots [(om/get-state owner)]]
-    (let [next-dot (<! channel)
+  [channel owner]
+  (go-loop [dots []]
+    (let [next-dot (:dot-state (<! channel))
           start (if (> (count dots) 1) (first dots))
-          end (if start (last dots))]
-      (if (adjacent? (last dots) next-dot)
-        (do
-          (om/update-state! owner :chain {:start start :end end})
-          (recur (merge dots next-dot)))
-        (recur dots)))))
+          end (if start (last dots))
+          adj? (and (adjacent? (last dots) next-dot)
+                    (= (:color (last dots)) (:color next-dot)))
+          [next-val chain-val] (cond
+                                (empty? dots) [[next-dot] {}]
+                                adj? [(merge dots next-dot)
+                                      {:color (:color (last dots))
+                                       :orientation (adjacence (last dots)
+                                                               next-dot)
+                                       :start start :end end}]
+                                :else [dots {}])]
+      (log<- (str "Next dot: " next-dot))
+      (log<- (str "Dots: " dots))
+      (log<- (str "Adjacent? " adj?))
+      (log<- (str "Chain Val: " chain-val))
+      (om/set-state! owner :chain chain-val)
+      (recur next-val))))
 
-(defn board-area [props owner]
+(defn chain-line [props owner]
+  (reify
+    om/IRender
+    (render [_]
+      (let [top nil
+            left nil
+            width nil
+            height nil
+            color nil
+            orientation nil]
+        (d/div #js {:style {:top top :left left :width width :height height}
+                    :className (join " " ["line" color orientation])})))))
+
+(defn chain-view [props owner]
   (reify
     om/IInitState
-    (init-state [_] {})
+    (init-state [_] {:chain nil})
 
     om/IWillMount
     (will-mount [_]
-      (let [click-pub (om/get-shared owner :click-pub-chan)
+      (let [click-pub-chan (om/get-shared owner :click-pub-chan)
             click-sub-chan (chan)]
-        (for [e [:mouse-down :mouse-up :mouse-over]]
-          (async/sub click-pub e click-sub-chan))))
+        (doseq [e [:mouse-down :mouse-up :mouse-over]]
+          (async/sub click-pub-chan e click-sub-chan))
+        (dot-trace click-sub-chan owner)))
 
-    om/IRender
-    (render [this]
+    om/IRenderState
+    (render-state [_ state]
+      (let [chain (if (:chain state)
+                    (om/build chain-line (:chain state)))]
+        (d/div #js {:className "chain-line"} chain)))))
+
+(defn board-area [props owner]
+  (reify
+    om/IRenderState
+    (render-state [this state]
       (let [board-size (get-in props [:ui :board-size])
             dots (for [col (range board-size) row (range board-size)]
                    {:column col :row row
@@ -144,7 +180,7 @@
             grid (om/build-all dot dots)]
         (d/div
          #js {:className "board-area"}
-         (d/div #js {:className "chain-line"})
+         (om/build chain-view nil)
          (d/div #js {:className "dot-highlights"})
          (apply d/div #js {:className "board"} grid))))))
 

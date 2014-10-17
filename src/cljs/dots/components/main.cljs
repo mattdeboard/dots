@@ -30,9 +30,9 @@
   (reify
     om/IWillMount
     (will-mount [_]
-      (let [shared-chan (om/get-shared owner :timer-pub-chan)
+      (let [timer-pub-chan (om/get-shared owner :timer-pub-chan)
             timer-sub-chan (chan)]
-        (async/sub shared-chan :game-complete timer-sub-chan)
+        (async/sub timer-pub-chan :game-complete timer-sub-chan)
         (switch-active-view timer-sub-chan owner))
       (om/set-state! owner :active-view (get-in props [:ui :active-view])))
 
