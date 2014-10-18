@@ -1,7 +1,8 @@
 (ns dots.components.board
   (:require [cljs.core.async :as async :refer [>! <! chan]]
             [clojure.string :refer [join]]
-            [dots.chans :refer [timer-chan click-chan remove-chan]]
+            [dots.chans :refer [timer-chan click-chan remove-chan
+                                transition-chan]]
             [dots.components.screen :refer [rand-colors]]
             [dots.utils :refer [log<-]]
             [om.core :as om :include-macros true]
@@ -77,9 +78,10 @@
       (log<- orientation)
       (om/set-state! owner :chain chain-val)
       (if (and dragging? (= :mouse-up event-type) (> (count dots) 1))
-        (go (doseq [dot dots]
-              (let [props (select-keys dot [:column :row])]
-                (>! remove-chan {:topic props})))))
+        (doseq [dot dots]
+          (let [props (select-keys dot [:column :row])]
+            (>! transition-chan {:topic props})
+            (>! remove-chan {:topic props}))))
       (recur next-val
              orientation
              (cond
@@ -94,8 +96,9 @@
 
 (defn dot-transition [channel owner]
   (go-loop []
-    (<! channel)
-    (om/update-state! owner :row inc)))
+    (let [val (<! channel)]
+      (log<- val)
+      (om/update-state! owner :row inc))))
 
 (defn header-col
   "Component for individual column headers (i.e. Time and Score)."
@@ -159,7 +162,8 @@
     (will-mount [_]
       (let [remove-pub-chan (om/get-shared owner :remove-pub-chan)
             remove-sub-chan (chan)
-            transition-sub-chan (chan)]
+            trans-pub-chan (om/get-shared owner :trans-pub-chan)
+            trans-sub-chan (chan)]
         ;; Each dot subscribes to the remove-pub-chan, listening for a topic
         ;; that matches its own column & row coordinates. This way it can be
         ;; removed from the game area on completion of a successful chain.
@@ -172,10 +176,10 @@
         ;; topic that matches the column & row coordinates of the dot directly
         ;; beneath it vertically. This way the dot can transition from its
         ;; current row to the one beneath it.
-        (async/sub remove-pub-chan {:column (om/get-state owner :column)
-                                    :row (inc (om/get-state owner :row))}
-                   transition-sub-chan)
-        (dot-transition transition-sub-chan owner)))
+        (async/sub trans-pub-chan {:column (om/get-state owner :column)
+                                   :row (inc (om/get-state owner :row))}
+                   trans-sub-chan)
+        (dot-transition trans-sub-chan owner)))
 
     om/IWillReceiveProps
     (will-receive-props [_ next-props]
@@ -193,8 +197,8 @@
         ;; Therefore, put a message on `remove-chan' destined for
         ;; the dot that is above this one.
         (if (not= current-row (:row next-state))
-          (go (>! remove-chan {:topic {:column (om/get-state owner :column)
-                                       :row (dec current-row)}})))))
+          (go (>! transition-chan {:topic {:column (om/get-state owner :column)
+                                           :row (dec current-row)}})))))
 
     om/IRenderState
     (render-state [_ state]

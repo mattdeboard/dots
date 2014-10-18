@@ -54,3 +54,5 @@
 (def click-chan (chan))
 
 (def remove-chan (chan))
+
+(def transition-chan (chan))
