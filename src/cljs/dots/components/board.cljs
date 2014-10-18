@@ -1,7 +1,7 @@
 (ns dots.components.board
   (:require [cljs.core.async :as async :refer [>! <! chan]]
             [clojure.string :refer [join]]
-            [dots.chans :refer [timer-chan click-chan]]
+            [dots.chans :refer [timer-chan click-chan remove-chan]]
             [dots.components.screen :refer [rand-colors]]
             [dots.utils :refer [log<-]]
             [om.core :as om :include-macros true]
@@ -33,7 +33,9 @@
                   ;; vertical adjacency: same column, different rows
                   (and (= 1 (abs (- (:row dot1) (:row dot2))))
                        (= (:column dot1) (:column dot2)))
-                  :vertical)))
+                  :vertical
+
+                  :default false)))
 
   ([dot1 dot2 orientation]
      (cond
@@ -72,10 +74,23 @@
 
            ;; Otherwise, just start over.
            :else [[next-dot] {}])]
+      (log<- orientation)
       (om/set-state! owner :chain chain-val)
-      (recur next-val orientation
-             (cond dragging? (if (= :mouse-up event-type) false true)
-                   :else (= :mouse-down event-type) true false)))))
+      (if (and dragging? (= :mouse-up event-type) (> (count dots) 1))
+        (go (doseq [dot dots]
+              (let [props (select-keys dot [:column :row])]
+                (>! remove-chan {:topic props})))))
+      (recur next-val
+             orientation
+             (cond
+              dragging? (if (= :mouse-up event-type) false true)
+              :else (= :mouse-down event-type) true false)))))
+
+(defn remove-dot [channel owner]
+  (go-loop []
+    (let [val (<! channel)]
+      (om/set-state! owner :row -1))
+    (recur)))
 
 (defn header-col
   "Component for individual column headers (i.e. Time and Score)."
@@ -131,26 +146,32 @@
   (reify
     om/IInitState
     (init-state [_]
-      (let [left (left-pos (:column props))
-            class-name (make-className props)]
-        (. js/console log class-name)
+      (let [left (left-pos (:column props))]
         (merge (select-keys props [:color :column :row])
-               {:top -112 :left left :class-name class-name})))
+               {:top -112 :left left})))
+
+    om/IWillMount
+    (will-mount [_]
+      (let [remove-pub-chan (om/get-shared owner :remove-pub-chan)
+            remove-sub-chan (chan)]
+        (async/sub remove-pub-chan {:column (om/get-state owner :column)
+                                    :row (om/get-state owner :row)}
+                   remove-sub-chan)
+        (remove-dot remove-sub-chan owner)))
 
     om/IWillReceiveProps
     (will-receive-props [_ next-props]
-      (let [left (left-pos (:column next-props))
-            class-name (make-className next-props)]
+      (let [left (left-pos (:column next-props))]
         (om/set-state! owner
                        (merge (select-keys next-props [:color :column :row])
-                              {:top -112 :left left :class-name class-name}))))
+                              {:top -112 :left left}))))
 
     om/IRenderState
     (render-state [_ state]
       (let [color (:color state)
             col (:column state)
             row (:row state)
-            class-name (:class-name state)
+            class-name (make-className state)
             left (str (:left state) "px")
             top (str (:top state) "px")
             handler (fn [event value state]

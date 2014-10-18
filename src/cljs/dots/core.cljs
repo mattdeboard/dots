@@ -20,5 +20,6 @@
  app-state
  {:target (. js/document (getElementById "app"))
   :shared {:timer-pub-chan (async/pub ch/timer-chan #(:topic %))
+           :remove-pub-chan (async/pub ch/remove-chan #(:topic %))
            :click-pub-chan (async/pub ch/click-chan #(:topic %))}})
 

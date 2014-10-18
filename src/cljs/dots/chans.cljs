@@ -52,3 +52,5 @@
 (def timer-chan (chan))
 
 (def click-chan (chan))
+
+(def remove-chan (chan))
