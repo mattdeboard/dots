@@ -9,6 +9,8 @@
             [om.dom :as d :include-macros true])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
+(def css-transition-group js/React.addons.CSSTransitionGroup)
+
 (defn- left-pos [col]
   (+ 23 (* 45 col)))
 
@@ -63,6 +65,8 @@
           start (if (> (count dots) 1) (first dots) next-dot)
           end (if (> (count dots) 1) (last dots) next-dot)
           orientation (orient (last dots) next-dot -orientation)
+          drag-done? (and dragging? (= :mouse-up event-type))
+          drag-valid? (and drag-done? (> (count dots) 1))
           [next-val chain-val]
           (cond
            ;; If the last dot in `dots' and `next-dot' are adjacent, conj `dots'
@@ -73,11 +77,11 @@
                          :length (inc (count dots))
                          :start start :end end}]
 
+           (and drag-done? drag-valid?) [[] false]
+
            ;; Otherwise, just start over.
            :else [[next-dot] {}])]
-      (log<- orientation)
-      (om/set-state! owner :chain chain-val)
-      (if (and dragging? (= :mouse-up event-type) (> (count dots) 1))
+      (if drag-valid?
         (doseq [dot dots]
           (let [props (select-keys dot [:column :row])]
             (>! transition-chan {:topic props})
@@ -90,6 +94,7 @@
 
 (defn remove-dot [channel owner]
   (go-loop []
+    (log<- "remove")
     (let [val (<! channel)]
       (om/set-state! owner :row -1))
     (recur)))
@@ -164,16 +169,16 @@
 
 (defn chain-view [props owner]
   (reify
-    om/IInitState
-    (init-state [_] {:chain nil})
+    ;; om/IInitState
+    ;; (init-state [_] {:chain nil})
 
-    om/IWillMount
-    (will-mount [_]
-      (let [click-pub-chan (om/get-shared owner :click-pub-chan)
-            click-sub-chan (chan)]
-        (doseq [e [:mouse-down :mouse-up :mouse-over]]
-          (async/sub click-pub-chan e click-sub-chan))
-        (dot-trace click-sub-chan owner)))
+    ;; om/IWillMount
+    ;; (will-mount [_]
+    ;;   (let [click-pub-chan (om/get-shared owner :click-pub-chan)
+    ;;         click-sub-chan (chan)]
+    ;;     (doseq [e [:mouse-down :mouse-up :mouse-over]]
+    ;;       (async/sub click-pub-chan e click-sub-chan))
+    ;;     (dot-trace click-sub-chan owner)))
 
     om/IRenderState
     (render-state [_ state]
@@ -251,6 +256,9 @@
 
 (defn dot-column [props owner]
   (reify
+    om/IInitState
+    (init-state [_] {:chain nil})
+
     om/IWillMount
     (will-mount [_]
       (let [click-pub-chan (om/get-shared owner :click-pub-chan)
@@ -260,12 +268,13 @@
         (dot-trace click-sub-chan owner)))
 
     om/IRenderState
-    (render-state [_ state]
+    (render-state [this state]
       (let [{:keys [rows col]} props
-            dots (om/build-all dot
-                  (for [row (range rows)]
-                    {:column col :row row
-                     :color (->> nil rand-colors (take 1) first)}))]
+            dots (om/build-all
+                  dot (for [row (range rows)]
+                        {:column col
+                         :row row
+                         :color (->> nil rand-colors (take 1) first)}))]
         (apply d/span #js {:className (str "col-" col)} dots)))))
 
 (defn board-area [props owner]
