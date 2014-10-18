@@ -77,7 +77,7 @@
                                               :length (inc (count dots))
                                               :start start :end end}]
 
-                                (and drag-done? drag-valid?) [[] false]
+                                drag-valid? [[] false]
 
                                 ;; Otherwise, just start over.
                                 :else [[next-dot] {}])]
@@ -88,13 +88,12 @@
             (>! remove-chan {:topic props}))))
       (recur next-val
              orientation
-             (cond
-              dragging? (if (= :mouse-up event-type) false true)
-              :else (= :mouse-down event-type) true false)))))
+             (if (or (= :mouse-down event-type)
+                     (and dragging? (not= :mouse-up event-type)))
+               true false)))))
 
 (defn remove-dot [channel owner]
   (go-loop []
-    (log<- "remove")
     (let [val (<! channel)]
       (om/set-state! owner :row -1))
     (recur)))
@@ -102,7 +101,6 @@
 (defn dot-transition [channel owner]
   (go-loop []
     (let [val (<! channel)]
-      (log<- val)
       (om/update-state! owner :row inc))))
 
 (defn header-col
@@ -256,9 +254,6 @@
 
 (defn dot-column [props owner]
   (reify
-    om/IInitState
-    (init-state [_] {:chain nil})
-
     om/IWillMount
     (will-mount [_]
       (let [click-pub-chan (om/get-shared owner :click-pub-chan)
