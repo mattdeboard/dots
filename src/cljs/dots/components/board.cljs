@@ -271,11 +271,10 @@
     om/IRenderState
     (render-state [this state]
       (let [{:keys [rows col]} props
-            dots (om/build-all
-                  dot (for [row (range rows)]
-                        {:column col
-                         :row row
-                         :color (->> nil rand-colors (take 1) first)}))]
+            rows-map (zipmap (range rows) (rand-colors nil))
+            dots (om/build-all dot (for [[row color] rows-map]
+                                     {:column col :row row :color color}))]
+        (om/set-state! owner :rows-map rows-map)
         (apply d/span #js {:className (str "col-" col)} dots)))))
 
 (defn board-area [props owner]
