@@ -21,6 +21,6 @@
  {:target (. js/document (getElementById "app"))
   :shared {:timer-pub-chan (async/pub ch/timer-chan #(:topic %))
            :remove-pub-chan (async/pub ch/remove-chan #(:topic %))
-           :click-pub-chan (async/pub ch/click-chan #(get-in % [:dot-state :column]))
+           :click-pub-chan (async/pub ch/click-chan #(:topic %))
            :trans-pub-chan (async/pub ch/transition-chan #(:topic %))}})
 

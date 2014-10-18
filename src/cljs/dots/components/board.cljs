@@ -23,20 +23,23 @@
   Otherwise, return `false'."
   ([dot1 dot2] (let [abs #(. js/Math abs %)]
                  (cond
+                  (nil? dot1)
+                  false
+
                   ;; if colors aren't equivalent, then for my purposes here, the
                   ;; dots are not adjacent.
                   (not= (:color dot1) (:color dot2))
                   false
 
-                  ;; horizontal adjacency: same row, different columns
-                  (and (= (:row dot1) (:row dot2))
-                       (= 1 (abs (- (:column dot1) (:column dot2)))))
-                  :horizontal
-
                   ;; vertical adjacency: same column, different rows
                   (and (= 1 (abs (- (:row dot1) (:row dot2))))
                        (= (:column dot1) (:column dot2)))
                   :vertical
+
+                  ;; horizontal adjacency: same row, different columns
+                  (and (= (:row dot1) (:row dot2))
+                       (= 1 (abs (- (:column dot1) (:column dot2)))))
+                  :horizontal
 
                   :default false)))
 
@@ -66,22 +69,20 @@
           end (if (> (count dots) 1) (last dots) next-dot)
           orientation (orient (last dots) next-dot -orientation)
           drag-done? (and dragging? (= :mouse-up event-type))
-          drag-valid? (and drag-done? (> (count dots) 1))
-          [next-val chain-val] (cond
-                                ;; If the last dot in `dots' and `next-dot' are
-                                ;; adjacent, conj `dots' and `next-dot', and
-                                ;; start building the chain state.
-                                orientation [(merge dots next-dot)
-                                             {:color (:color (last dots))
-                                              :orientation orientation
-                                              :length (inc (count dots))
-                                              :start start :end end}]
-
-                                drag-valid? [[] false]
-
-                                ;; Otherwise, just start over.
-                                :else [[next-dot] {}])]
-      (if drag-valid?
+          valid-chain? (and drag-done? (> (count dots) 1))
+          next-val (cond
+                    ;; If the last dot in `dots' and `next-dot' are
+                    ;; adjacent, conj `dots' and `next-dot', and
+                    ;; start building the chain state.
+                    orientation (merge dots next-dot)
+                    valid-chain? []
+                    ;; Otherwise, just start over.
+                    :else [next-dot])]
+      ;; (log<- {:column (om/get-state owner :column)
+      ;;         :event event-type
+      ;;         :valid-chain? valid-chain?
+      ;;         :orientation orientation})
+      (if valid-chain?
         (doseq [dot dots]
           (let [props (select-keys dot [:column :row])]
             (>! transition-chan {:topic props})
@@ -257,11 +258,14 @@
     om/IWillMount
     (will-mount [_]
       (let [click-pub-chan (om/get-shared owner :click-pub-chan)
-            click-sub-chan (chan)]
+            click-sub-chan (chan)
+            this-column (om/get-state owner :column)]
         ;; We only want the column component to subscribe to events from its
         ;; own child dots. In other words, the dot-column component for column
         ;; 4 should only subscribe to events from dots in column 4.
-        (async/sub click-pub-chan (om/get-state owner :column) click-sub-chan)
+        (async/sub click-pub-chan :mouse-down click-sub-chan)
+        (async/sub click-pub-chan :mouse-over click-sub-chan)
+        (async/sub click-pub-chan :mouse-up click-sub-chan)
         (dot-trace click-sub-chan owner)))
 
     om/IRenderState
