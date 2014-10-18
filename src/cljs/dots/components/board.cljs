@@ -148,6 +148,39 @@
         row (:row props)]
     (str "dot levelish " (name color) " level-" row)))
 
+(defn chain-line [props owner]
+  (reify
+    om/IRender
+    (render [_]
+      ;; TODO: Flesh out how the dimensions of this thing are fleshed out.
+      (let [top nil
+            left nil
+            width nil
+            height nil
+            color nil
+            orientation nil]
+        (d/div #js {:style {:top top :left left :width width :height height}
+                    :className (join " " ["line" color orientation])})))))
+
+(defn chain-view [props owner]
+  (reify
+    om/IInitState
+    (init-state [_] {:chain nil})
+
+    om/IWillMount
+    (will-mount [_]
+      (let [click-pub-chan (om/get-shared owner :click-pub-chan)
+            click-sub-chan (chan)]
+        (doseq [e [:mouse-down :mouse-up :mouse-over]]
+          (async/sub click-pub-chan e click-sub-chan))
+        (dot-trace click-sub-chan owner)))
+
+    om/IRenderState
+    (render-state [_ state]
+      (let [chain (if (:chain state)
+                    (om/build chain-line (:chain state)))]
+        (d/div #js {:className "chain-line"} chain)))))
+
 (defn dot
   "Component for an individual dot."
   [props owner]
@@ -216,25 +249,8 @@
                     :onMouseUp #(handler % :mouse-up state)
                     :style #js {:top top :left left}})))))
 
-(defn chain-line [props owner]
+(defn dot-column [props owner]
   (reify
-    om/IRender
-    (render [_]
-      ;; TODO: Flesh out how the dimensions of this thing are fleshed out.
-      (let [top nil
-            left nil
-            width nil
-            height nil
-            color nil
-            orientation nil]
-        (d/div #js {:style {:top top :left left :width width :height height}
-                    :className (join " " ["line" color orientation])})))))
-
-(defn chain-view [props owner]
-  (reify
-    om/IInitState
-    (init-state [_] {:chain nil})
-
     om/IWillMount
     (will-mount [_]
       (let [click-pub-chan (om/get-shared owner :click-pub-chan)
@@ -245,19 +261,22 @@
 
     om/IRenderState
     (render-state [_ state]
-      (let [chain (if (:chain state)
-                    (om/build chain-line (:chain state)))]
-        (d/div #js {:className "chain-line"} chain)))))
+      (let [{:keys [rows col]} props
+            dots (om/build-all dot
+                  (for [row (range rows)]
+                    {:column col :row row
+                     :color (->> nil rand-colors (take 1) first)}))]
+        (apply d/span #js {:className (str "col-" col)} dots)))))
 
 (defn board-area [props owner]
   (reify
     om/IRenderState
     (render-state [this state]
       (let [board-size (get-in props [:ui :board-size])
-            dots (for [col (range board-size) row (range board-size)]
-                   {:column col :row row
-                    :color (first (take 1 (rand-colors nil)))})
-            grid (om/build-all dot dots)]
+            grid (map #(om/build dot-column
+                                 {:col % :rows board-size}
+                                 {:react-key (str "col-" %)})
+                      (range board-size))]
         (d/div
          #js {:className "board-area"}
          (om/build chain-view nil)
