@@ -258,8 +258,10 @@
     (will-mount [_]
       (let [click-pub-chan (om/get-shared owner :click-pub-chan)
             click-sub-chan (chan)]
-        (doseq [e [:mouse-down :mouse-up :mouse-over]]
-          (async/sub click-pub-chan e click-sub-chan))
+        ;; We only want the column component to subscribe to events from its
+        ;; own child dots. In other words, the dot-column component for column
+        ;; 4 should only subscribe to events from dots in column 4.
+        (async/sub click-pub-chan (om/get-state owner :column) click-sub-chan)
         (dot-trace click-sub-chan owner)))
 
     om/IRenderState
@@ -279,7 +281,8 @@
       (let [board-size (get-in props [:ui :board-size])
             grid (map #(om/build dot-column
                                  {:col % :rows board-size}
-                                 {:react-key (str "col-" %)})
+                                 {:react-key (str "col-" %)
+                                  :init-state {:column %}})
                       (range board-size))]
         (d/div
          #js {:className "board-area"}
