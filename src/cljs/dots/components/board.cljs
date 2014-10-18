@@ -102,7 +102,8 @@
 (defn dot-transition [channel owner]
   (go-loop []
     (let [val (<! channel)]
-      (om/update-state! owner :row inc))))
+      (om/update-state! owner :row inc))
+    (recur)))
 
 (defn header-col
   "Component for individual column headers (i.e. Time and Score)."
