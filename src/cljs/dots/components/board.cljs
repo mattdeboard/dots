@@ -78,14 +78,14 @@
                     valid-chain? []
                     ;; Otherwise, just start over.
                     :else [next-dot])]
-      ;; (log<- {:column (om/get-state owner :column)
-      ;;         :event event-type
-      ;;         :valid-chain? valid-chain?
-      ;;         :orientation orientation})
       (if valid-chain?
-        (doseq [dot dots]
+        (doseq [dot dots :when (= (:column dot) (om/get-state owner :column))]
           (let [props (select-keys dot [:column :row])]
-            (>! remove-chan {:topic props}))))
+            (>! remove-chan {:topic props})
+            (>! transition-chan {:topic {:column (:column dot)}
+                                 :dot-row (:row dot)
+                                 :event event-type
+                                 :owner-column (om/get-state owner :column)}))))
       (recur next-val
              orientation
              (if (or (= :mouse-down event-type)
