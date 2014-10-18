@@ -184,6 +184,18 @@
                        (merge (select-keys next-props [:color :column :row])
                               {:top -112 :left left}))))
 
+    om/IWillUpdate
+    (will-update [_ next-props next-state]
+      (let [current-row (om/get-state owner :row)]
+        ;; Compare the current row to the potential next row. If they aren't
+        ;; equal, that means this dot will be descending down the grid,
+        ;; vertically (which means the value of :row will be increasing).
+        ;; Therefore, put a message on `remove-chan' destined for
+        ;; the dot that is above this one.
+        (if (not= current-row (:row next-state))
+          (go (>! remove-chan {:topic {:column (om/get-state owner :column)
+                                       :row (dec current-row)}})))))
+
     om/IRenderState
     (render-state [_ state]
       (let [color (:color state)
