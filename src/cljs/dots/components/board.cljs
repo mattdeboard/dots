@@ -198,25 +198,14 @@
     om/IWillMount
     (will-mount [_]
       (let [remove-pub-chan (om/get-shared owner :remove-pub-chan)
-            remove-sub-chan (chan)
-            trans-pub-chan (om/get-shared owner :trans-pub-chan)
-            trans-sub-chan (chan)]
+            remove-sub-chan (chan)]
         ;; Each dot subscribes to the remove-pub-chan, listening for a topic
         ;; that matches its own column & row coordinates. This way it can be
         ;; removed from the game area on completion of a successful chain.
         (async/sub remove-pub-chan {:column (om/get-state owner :column)
                                     :row (om/get-state owner :row)}
                    remove-sub-chan)
-        (remove-dot remove-sub-chan owner)
-
-        ;; Each dot also subscribes to the remove-pub-chan, listening for a
-        ;; topic that matches the column & row coordinates of the dot directly
-        ;; beneath it vertically. This way the dot can transition from its
-        ;; current row to the one beneath it.
-        (async/sub trans-pub-chan {:column (om/get-state owner :column)
-                                   :row (inc (om/get-state owner :row))}
-                   trans-sub-chan)
-        (dot-transition trans-sub-chan owner)))
+        (remove-dot remove-sub-chan owner)))
 
     om/IWillReceiveProps
     (will-receive-props [_ next-props]
@@ -253,20 +242,36 @@
                     :onMouseUp #(handler % :mouse-up state)
                     :style #js {:top top :left left}})))))
 
+(defn foo [channel owner]
+  (go-loop []
+    (log<- (merge {:column (om/get-state owner :column)} (<! channel)))
+    (recur)))
+
 (defn dot-column [props owner]
   (reify
     om/IWillMount
     (will-mount [_]
       (let [click-pub-chan (om/get-shared owner :click-pub-chan)
             click-sub-chan (chan)
-            this-column (om/get-state owner :column)]
+            this-column (om/get-state owner :column)
+            trans-pub-chan (om/get-shared owner :trans-pub-chan)
+            trans-sub-chan (chan)]
         ;; We only want the column component to subscribe to events from its
         ;; own child dots. In other words, the dot-column component for column
         ;; 4 should only subscribe to events from dots in column 4.
         (async/sub click-pub-chan :mouse-down click-sub-chan)
         (async/sub click-pub-chan :mouse-over click-sub-chan)
         (async/sub click-pub-chan :mouse-up click-sub-chan)
-        (dot-trace click-sub-chan owner)))
+        (dot-trace click-sub-chan owner)
+
+        ;; Each dot also subscribes to the remove-pub-chan, listening for a
+        ;; topic that matches the column & row coordinates of the dot directly
+        ;; beneath it vertically. This way the dot can transition from its
+        ;; current row to the one beneath it.
+        (async/sub trans-pub-chan
+                   {:column (om/get-state owner :column)}
+                   trans-sub-chan)
+        (foo trans-sub-chan owner)))
 
     om/IRenderState
     (render-state [this state]
