@@ -92,6 +92,11 @@
       (om/set-state! owner :row -1))
     (recur)))
 
+(defn dot-transition [channel owner]
+  (go-loop []
+    (<! channel)
+    (om/update-state! owner :row inc)))
+
 (defn header-col
   "Component for individual column headers (i.e. Time and Score)."
   [props owner]
@@ -153,11 +158,24 @@
     om/IWillMount
     (will-mount [_]
       (let [remove-pub-chan (om/get-shared owner :remove-pub-chan)
-            remove-sub-chan (chan)]
+            remove-sub-chan (chan)
+            transition-sub-chan (chan)]
+        ;; Each dot subscribes to the remove-pub-chan, listening for a topic
+        ;; that matches its own column & row coordinates. This way it can be
+        ;; removed from the game area on completion of a successful chain.
         (async/sub remove-pub-chan {:column (om/get-state owner :column)
                                     :row (om/get-state owner :row)}
                    remove-sub-chan)
-        (remove-dot remove-sub-chan owner)))
+        (remove-dot remove-sub-chan owner)
+
+        ;; Each dot also subscribes to the remove-pub-chan, listening for a
+        ;; topic that matches the column & row coordinates of the dot directly
+        ;; beneath it vertically. This way the dot can transition from its
+        ;; current row to the one beneath it.
+        (async/sub remove-pub-chan {:column (om/get-state owner :column)
+                                    :row (inc (om/get-state owner :row))}
+                   transition-sub-chan)
+        (dot-transition transition-sub-chan owner)))
 
     om/IWillReceiveProps
     (will-receive-props [_ next-props]
