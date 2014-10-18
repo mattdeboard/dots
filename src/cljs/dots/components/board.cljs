@@ -85,7 +85,6 @@
       (if valid-chain?
         (doseq [dot dots]
           (let [props (select-keys dot [:column :row])]
-            (>! transition-chan {:topic props})
             (>! remove-chan {:topic props}))))
       (recur next-val
              orientation
