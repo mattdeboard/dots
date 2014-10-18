@@ -67,20 +67,20 @@
           orientation (orient (last dots) next-dot -orientation)
           drag-done? (and dragging? (= :mouse-up event-type))
           drag-valid? (and drag-done? (> (count dots) 1))
-          [next-val chain-val]
-          (cond
-           ;; If the last dot in `dots' and `next-dot' are adjacent, conj `dots'
-           ;; and `next-dot', and start building the chain state.
-           orientation [(merge dots next-dot)
-                        {:color (:color (last dots))
-                         :orientation orientation
-                         :length (inc (count dots))
-                         :start start :end end}]
+          [next-val chain-val] (cond
+                                ;; If the last dot in `dots' and `next-dot' are
+                                ;; adjacent, conj `dots' and `next-dot', and
+                                ;; start building the chain state.
+                                orientation [(merge dots next-dot)
+                                             {:color (:color (last dots))
+                                              :orientation orientation
+                                              :length (inc (count dots))
+                                              :start start :end end}]
 
-           (and drag-done? drag-valid?) [[] false]
+                                (and drag-done? drag-valid?) [[] false]
 
-           ;; Otherwise, just start over.
-           :else [[next-dot] {}])]
+                                ;; Otherwise, just start over.
+                                :else [[next-dot] {}])]
       (if drag-valid?
         (doseq [dot dots]
           (let [props (select-keys dot [:column :row])]
