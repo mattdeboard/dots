@@ -244,7 +244,10 @@
 
 (defn foo [channel owner]
   (go-loop []
-    (log<- (merge {:column (om/get-state owner :column)} (<! channel)))
+    (let [msg (<! channel)
+          dot-row (:dot-row msg)
+          col (om/get-state owner :column)]
+      (log<- owner))
     (recur)))
 
 (defn dot-column [props owner]
@@ -275,11 +278,10 @@
 
     om/IRenderState
     (render-state [this state]
-      (let [{:keys [rows col]} props
-            rows-map (zipmap (range rows) (rand-colors nil))
+      (let [col (:column state)
+            rows-map (:rows-map state)
             dots (om/build-all dot (for [[row color] rows-map]
                                      {:column col :row row :color color}))]
-        (om/set-state! owner :rows-map rows-map)
         (apply d/span #js {:className (str "col-" col)} dots)))))
 
 (defn board-area [props owner]
@@ -287,10 +289,13 @@
     om/IRenderState
     (render-state [this state]
       (let [board-size (get-in props [:ui :board-size])
-            grid (map #(om/build dot-column
-                                 {:col % :rows board-size}
-                                 {:react-key (str "col-" %)
-                                  :init-state {:column %}})
+            grid (map #(om/build
+                        dot-column
+                        {:column %}
+                        {:react-key (str "col-" %)
+                         :init-state {:column %
+                                      :rows-map (zipmap (range board-size)
+                                                        (rand-colors nil))}})
                       (range board-size))]
         (d/div
          #js {:className "board-area"}
