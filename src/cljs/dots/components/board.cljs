@@ -59,7 +59,7 @@
 (defn dot-trace
   "Reads from `channel', accumulating a vector of dot states in order to
   create a chain-line between the dots."
-  [channel owner]
+  [channel owner owner-col]
   ;; The loop params are hopefully self-explanatory but just in case:
   ;;   - `-orientation': This gives us the capacity to know which way we were
   ;;     creating a chain line last go 'round, so that we can make decisions
@@ -86,15 +86,14 @@
                     ;; Otherwise, just start over.
                     :else [next-dot])]
       (if valid-chain?
-        (let [owner-col (om/get-state owner :column)]
-          (doseq [dot dots :when (= (:column dot) (om/get-state owner :column))]
-            (let [props (select-keys dot [:column :row])]
-              (>! remove-chan {:topic props})
-              (>! transition-chan
-                  {:topic :transition
-                   :dot-row (:row dot)
-                   :event event-type
-                   :dot-column owner-col})))))
+        (doseq [dot dots :when (= (:column dot) owner-col)]
+          (let [props (select-keys dot [:column :row])]
+            (>! remove-chan {:topic props})
+            (>! transition-chan
+                {:topic :transition
+                 :dot-row (:row dot)
+                 :event event-type
+                 :dot-column owner-col}))))
       (recur next-val
              orientation
              (if (or (= :mouse-down event-type)
@@ -263,29 +262,33 @@
         (async/sub click-pub-chan :mouse-down click-sub-chan)
         (async/sub click-pub-chan :mouse-over click-sub-chan)
         (async/sub click-pub-chan :mouse-up click-sub-chan)
-        (dot-trace click-sub-chan owner)))
+        (dot-trace click-sub-chan owner (:column props))))
 
     om/IRenderState
     (render-state [this state]
-      (let [get-rows-map (fn []
-                           (om/ref-cursor
-                            (get-in (columns-state-cur)
-                                    [(key-or-int (:column props) "col-")
-                                     :rows-map])))
-            rows-map (om/observe owner (get-rows-map))
-            col (:column props)
+      (let [col (:column props)
+            rows-map (:rows-map props)
             dots (om/build-all dot (for [[row color] rows-map]
                                      (let [r (key-or-int row)]
                                        {:column col :row r :color color})))]
         (apply d/span #js {:className (str "col-" col)} dots)))))
 
-(defn foo [channel owner]
-  (go-loop []
-    (let [msg (<! channel)
-          dot-row (:dot-row msg)
-          dot-col (:dot-column msg)]
-      (log<- msg))
-    (recur)))
+(defn transition-handler
+  "This handler takes messages off the transition subscription channel and
+  uses that information to transition the grid after dots are removed."
+  [channel owner]
+  (let [cur (columns-state-cur)]
+    (go-loop []
+      (let [msg (<! channel)
+            dot-row (:dot-row msg)
+            dot-col (:dot-column msg)]
+        (om/transact!
+         cur [(key-or-int dot-col "col-")]
+         (fn [m]
+           (merge m {:rows-map
+                (let [rows-map (:rows-map m)]
+                    (merge rows-map {:row-1 (first (rand-colors nil))}))}))))
+      (recur))))
 
 (defn board-area [props owner]
   (reify
@@ -294,7 +297,7 @@
       (let [trans-pub-chan (om/get-shared owner :trans-pub-chan)
             trans-sub-chan (chan)]
         (async/sub trans-pub-chan :transition trans-sub-chan)
-        (foo trans-sub-chan owner)))
+        (transition-handler trans-sub-chan owner)))
 
     om/IRenderState
     (render-state [this state]
@@ -314,6 +317,8 @@
 
     om/IRender
     (render [this]
+      ;; (log<- (get-in props [:game-state :columns :col-5 :rows-map]))
+      ;; (log<- (get-in props [:ui :active-view]))
       (d/div
        #js {:className "dots-game" :id "game-board"
             :style (clj->js (:style props))}
