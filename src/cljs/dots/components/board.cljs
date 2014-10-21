@@ -269,13 +269,13 @@
     (render-state [this state]
       (let [get-rows-map (fn []
                            (om/ref-cursor
-                            (get (columns-state-cur)
-                                 (->> props :column (str "col-") keyword))))
+                            (get-in (columns-state-cur)
+                                    [(key-or-int (:column props) "col-")
+                                     :rows-map])))
             rows-map (om/observe owner (get-rows-map))
             col (:column props)
-            ; rows-map (:rows-map props)
             dots (om/build-all dot (for [[row color] rows-map]
-                                     (let [r (key-or-int row "-")]
+                                     (let [r (key-or-int row)]
                                        {:column col :row r :color color})))]
         (apply d/span #js {:className (str "col-" col)} dots)))))
 

@@ -1,4 +1,5 @@
-(ns dots.utils)
+(ns dots.utils
+  (:require [clojure.string :refer [split]]))
 
 (defn log<- [thing]
   (. js/console log (clj->js thing)))
@@ -7,11 +8,5 @@
   (js/parseInt s))
 
 (defn key-or-int
-  [i prefix-or-sep]
-  (cond
-   (integer? i) (->> i (str prefix-or-sep) keyword)
-   (keyword? i) (-> i
-                    name
-                    (clojure.string/split (re-pattern prefix-or-sep))
-                    last
-                    parse-int)))
+  ([i prefix] (->> i (str prefix) keyword))
+  ([i] (-> i name (split #"-") last parse-int)))
