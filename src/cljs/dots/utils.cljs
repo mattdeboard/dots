@@ -6,7 +6,7 @@
 (defn key-or-int
   [i prefix-or-sep]
   (cond
-   (integer? i) (->> i (str prefix i) keyword)
+   (integer? i) (->> i (str prefix-or-sep) keyword)
    (keyword? i) (-> i
                     name
                     (clojure.string/split (re-pattern prefix-or-sep))

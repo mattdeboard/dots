@@ -5,12 +5,10 @@
 (def BOARD-SIZE 6)
 
 (defn- column-state [column]
-  (let [v {(key-or-int column "col-")
-           {:column column
-            :rows-map (zipmap (map #(key-or-int % "row-") (range BOARD-SIZE))
-                              (rand-colors nil))}}]
-    (. js/console log (clj->js v))
-    v))
+  {(key-or-int column "col-")
+   {:column column
+    :rows-map (zipmap (map #(key-or-int % "row-") (range BOARD-SIZE))
+                      (rand-colors nil))}})
 
 (defn- columns []
   (apply merge (map column-state (range BOARD-SIZE))))
