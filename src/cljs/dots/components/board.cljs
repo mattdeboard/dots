@@ -1,6 +1,7 @@
 (ns dots.components.board
   (:require [cljs.core.async :as async :refer [>! <! chan]]
             [clojure.string :refer [join]]
+            [dots.appstate :refer [app-state]]
             [dots.chans :refer [timer-chan click-chan remove-chan
                                 transition-chan]]
             [dots.components.screen :refer [rand-colors]]
@@ -10,6 +11,12 @@
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (def css-transition-group js/React.addons.CSSTransitionGroup)
+
+(defn game-state-cur []
+  (om/ref-cursor (:game-state (om/root-cursor app-state))))
+
+(defn columns-state-cur []
+  (om/ref-cursor (get-in (om/root-cursor app-state) [:game-state :columns])))
 
 (defn- left-pos [col]
   (+ 23 (* 45 col)))
@@ -286,14 +293,8 @@
     om/IRenderState
     (render-state [this state]
       (let [board-size (get-in props [:ui :board-size])
-            grid (map #(om/build
-                        dot-column
-                        {:column %}
-                        {:react-key (str "col-" %)
-                         :init-state {:column %
-                                      :rows-map (zipmap (range board-size)
-                                                        (rand-colors nil))}})
-                      (range board-size))]
+            columns (om/observe owner (columns-state-cur))
+            grid (om/build-all dot-column (vals columns))]
         (d/div
          #js {:className "board-area"}
          (om/build chain-view nil)
