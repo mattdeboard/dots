@@ -5,7 +5,7 @@
             [dots.chans :refer [timer-chan click-chan remove-chan
                                 transition-chan]]
             [dots.components.screen :refer [rand-colors]]
-            [dots.utils :refer [log<-]]
+            [dots.utils :refer [log<- key-or-int]]
             [om.core :as om :include-macros true]
             [om.dom :as d :include-macros true])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
@@ -267,10 +267,16 @@
 
     om/IRenderState
     (render-state [this state]
-      (let [col (:column state)
-            rows-map (:rows-map state)
+      (let [get-rows-map (fn []
+                           (om/ref-cursor
+                            (get (columns-state-cur)
+                                 (->> props :column (str "col-") keyword))))
+            rows-map (om/observe owner (get-rows-map))
+            col (:column props)
+            ; rows-map (:rows-map props)
             dots (om/build-all dot (for [[row color] rows-map]
-                                     {:column col :row row :color color}))]
+                                     (let [r (key-or-int row "-")]
+                                       {:column col :row r :color color})))]
         (apply d/span #js {:className (str "col-" col)} dots)))))
 
 (defn foo [channel owner]

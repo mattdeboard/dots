@@ -1,10 +1,16 @@
 (ns dots.appstate
-  (:require [dots.components.screen :refer [rand-colors]]))
+  (:require [dots.components.screen :refer [rand-colors]]
+            [dots.utils :refer [key-or-int]]))
 
 (def BOARD-SIZE 6)
 
 (defn- column-state [column]
-  {column {:rows-map (zipmap (range BOARD-SIZE) (rand-colors nil))}})
+  (let [v {(key-or-int column "col-")
+           {:column column
+            :rows-map (zipmap (map #(key-or-int % "row-") (range BOARD-SIZE))
+                              (rand-colors nil))}}]
+    (. js/console log (clj->js v))
+    v))
 
 (defn- columns []
   (apply merge (map column-state (range BOARD-SIZE))))
