@@ -7,8 +7,8 @@
 (defn- column-state [column]
   {(key-or-int column "col-")
    {:column column
-    :rows-map (zipmap (map #(key-or-int % "row-") (range BOARD-SIZE))
-                      (rand-colors nil))}})
+    :rows-map (for [i (range BOARD-SIZE)]
+                {:row i :color (first (rand-colors nil))})}})
 
 (defn- columns []
   (apply merge (map column-state (range BOARD-SIZE))))
