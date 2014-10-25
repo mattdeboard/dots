@@ -269,9 +269,8 @@
     (render-state [this state]
       (let [col (:column props)
             rows-map (:rows-map props)
-            dots (om/build-all dot (for [[row color] rows-map]
-                                     (let [r (key-or-int row)]
-                                       {:column col :row r :color color})))]
+            dots (om/build-all dot (for [{:keys [row color]} rows-map]
+                                     {:column col :row row :color color}))]
         (apply d/span #js {:className (str "col-" col)} dots)))))
 
 (defn transition-handler
@@ -284,11 +283,17 @@
             dot-row (:dot-row msg)
             dot-col (:dot-column msg)]
         (om/transact!
-         cur [(key-or-int dot-col "col-")]
-         (fn [m]
-           (merge m {:rows-map
-                (let [rows-map (:rows-map m)]
-                    (merge rows-map {:row-1 (first (rand-colors nil))}))}))))
+         cur (key-or-int dot-col "col-")
+         ;; Here is the actual transition logic. Get the survivors (dots above
+         ;; the removed dots) and the stable dots (dots below the removed dots),
+         ;; then combine those into a single collection. Then, create a new dot
+         ;; for each blank row.
+         (fn [{:keys [column rows-map]}]
+           (let [survivors (filter #(> dot-row (:row %)) rows-map)
+                 stable (filter #(< dot-row (:row %)) rows-map)]
+             {:column column
+              :rows-map (into stable (map #(update-in % [:row] inc)
+                                          survivors))}))))
       (recur))))
 
 (defn board-area [props owner]
