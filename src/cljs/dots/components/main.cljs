@@ -1,5 +1,6 @@
 (ns dots.components.main
   (:require [cljs.core.async :as async :refer [chan <!]]
+            [dots.appstate :refer [app-state]]
             [dots.chans :refer [timer-chan]]
             [dots.components.board :refer [game-board]]
             [dots.components.screen :refer [score-screen]]
@@ -7,6 +8,9 @@
             [om.core :as om :include-macros true]
             [om.dom :as d :include-macros true])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
+
+(defn ui-state-cur []
+  (om/ref-cursor (:ui (om/root-cursor app-state))))
 
 (defn handle-click [e owner cursor]
   (go (>! timer-chan {:topic :game-complete})))
@@ -20,11 +24,13 @@
     (if (= current-view "game-board") "score-screen" "game-board")))
 
 (defn switch-active-view [channel owner]
-  (go-loop []
-    (let [next-view (switch-screen owner)
-          topic (<! channel)]
-      (om/set-state! owner :active-view next-view))
-    (recur)))
+  (let [cur (ui-state-cur)]
+    (go-loop []
+      (let [next-view (switch-screen owner)
+            topic (<! channel)]
+        (om/update! cur :active-view next-view))
+      ;;(om/set-state! owner :active-view next-view))
+    (recur))))
 
 (defn game-container [props owner]
   (reify
@@ -44,6 +50,7 @@
 
     om/IRender
     (render [_]
+      (log<- (om/get-state owner :active-view))
       (d/div
        #js {:className "dots-game-container no scroll"
             :ondragstart "return false;"
