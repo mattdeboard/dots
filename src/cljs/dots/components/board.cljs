@@ -288,6 +288,8 @@
          ;; the removed dots) and the stable dots (dots below the removed dots),
          ;; then combine those into a single collection. Then, create a new dot
          ;; for each blank row.
+
+         ;; TODO: Actually create a new dot for each blank row.
          (fn [{:keys [column rows-map]}]
            (let [survivors (filter #(> dot-row (:row %)) rows-map)
                  stable (filter #(< dot-row (:row %)) rows-map)]
