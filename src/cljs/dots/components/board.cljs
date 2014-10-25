@@ -86,14 +86,15 @@
                     ;; Otherwise, just start over.
                     :else [next-dot])]
       (if valid-chain?
-        (doseq [dot dots :when (= (:column dot) owner-col)]
-          (let [props (select-keys dot [:column :row])]
-            (>! remove-chan {:topic props})
-            (>! transition-chan
-                {:topic :transition
-                 :dot-row (:row dot)
-                 :event event-type
-                 :dot-column owner-col}))))
+        (do
+          (if (some #(= (:column %) owner-col) dots)
+            (>! transition-chan {:topic :transition
+                                 :dot-row (apply max (map :row dots))
+                                 :event event-type
+                                 :dot-column owner-col}))
+          (doseq [dot dots :when (= (:column dot) owner-col)]
+            (let [props (select-keys dot [:column :row])]
+              (>! remove-chan {:topic props})))))
       (recur next-val
              orientation
              (if (or (= :mouse-down event-type)
@@ -317,8 +318,6 @@
 
     om/IRender
     (render [this]
-      ;; (log<- (get-in props [:game-state :columns :col-5 :rows-map]))
-      ;; (log<- (get-in props [:ui :active-view]))
       (d/div
        #js {:className "dots-game" :id "game-board"
             :style (clj->js (:style props))}
